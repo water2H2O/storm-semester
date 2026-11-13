@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Storm Semester · 学期风暴</title>
+<meta name="description" content="把一学期的截止日期变成天气。你的学期也有天气预报。">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-weather="storm">
+  <div class="sky" aria-hidden="true">
+    <div class="sky-layer sky-a"></div>
+    <div class="sky-layer sky-b"></div>
+    <div class="rain" id="rain"></div>
+    <div class="flash" id="flash"></div>
+  </div>
+
+  <main class="wrap">
+    <header class="top">
+      <div class="brand">
+        <span class="dot"></span>
+        Storm Semester
+      </div>
+      <div class="theme-tag">EdTech</div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-icon" id="heroIcon">⛈️</div>
+      <h1 class="hero-title" id="heroTitle">雷暴</h1>
+      <p class="hero-sub" id="heroSub">今天有 0 个事项到期</p>
+      <div class="hero-meta">
+        <span class="pill" id="heroDate">2026-11-13 周五</span>
+        <span class="pill" id="heroScore">压力 9.4</span>
+      </div>
+    </section>
+
+    <section class="next" id="nextSection">
+      <div class="next-inner">
+        <div class="next-icon" id="nextIcon">🌑</div>
+        <div class="next-body">
+          <div class="next-label">下一场风暴</div>
+          <div class="next-title" id="nextTitle">黑色暴雨 · 周五 11/13</div>
+          <div class="next-sub" id="nextSub">5 个事项 · 还有 4 天</div>
+        </div>
+        <div class="next-badge" id="nextBadge">T8</div>
+      </div>
+    </section>
+
+    <section class="focus">
+      <div class="section-label">现在做这一件</div>
+      <article class="focus-card" id="focusCard"></article>
+    </section>
+
+    <section class="week">
+      <div class="section-label">本周</div>
+      <div class="week-strip" id="weekStrip"></div>
+    </section>
+
+    <section class="timeline">
+      <div class="section-label">未来 14 天</div>
+      <div class="timeline-scroll" id="timeline"></div>
+      <div class="timeline-hint">越远越模糊 —— 远期预报本来就不准</div>
+    </section>
+
+    <footer class="foot">
+      <span>天气不归你管，伞归你管。</span>
+      <span class="foot-dim">BUHACK 2.0 · HKBU Coding Club</span>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

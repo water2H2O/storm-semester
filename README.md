@@ -1,106 +1,102 @@
-# Storm Semester
+# Storm Semester · 学期风暴
 
-**Your semester has weather. Nobody forecasts it.**
+> 你的学期也有天气预报。
 
-A weather-forecast interface for academic deadlines. Instead of a calendar that only tells you *when*, Storm Semester tells you *how bad* each day is — and when the next storm lands.
-
-**Theme: EdTech** — a study tool that helps students see, plan for, and survive deadline pressure.
+**主题：EdTech** —— 一个让学业压力变得可预测、可准备的学习工具。
 
 ---
 
-## The problem
+## 问题
 
-A real Hong Kong undergraduate November:
+一份真实的香港本科生 11 月日程：
 
-- 19 events packed into 8 days
-- 5 deadlines landing on a single Friday
-- Plus an in-class interview, a midterm exam, and a presentation — none of which have a "submit" button, so a to-do list ignores them entirely
+- 19 个事项，挤在 8 天里
+- 某个周五一天有 5 个截止时间
+- 外加一次课上抽查、一场考试、一个汇报 —— 它们没有"提交"按钮，所以待办清单直接忽略了它们
 
-Existing tools have three blind spots:
+现有工具的三个盲区：
 
-| Tool | Blind spot |
+| 工具 | 盲区 |
 |---|---|
-| Calendar | tells you *when*, not *how heavy* |
-| To-do list | only tracks things you can tick off; exams and interviews vanish |
-| All of them | never answer **"which one do I touch first?"** |
+| 日历 | 只告诉你**什么时候**，不告诉你**有多重** |
+| 待办清单 | 只记录能勾掉的；考试和抽查在它眼里不存在 |
+| 所有工具 | 都不回答「**现在到底该动哪一件**」 |
 
-The real feeling is not "I have 19 tasks". It is "everything is collapsing and I don't know which piece to save first."
-
----
-
-## What it does
-
-**1. Today's weather** — each day gets a weather state derived from the deadlines pressing on it.
-
-| Pressure | Weather | Signal |
-|---|---|---|
-| 0 | clear | — |
-| 0.01 – 2 | cloudy | — |
-| 2 – 4 | overcast | — |
-| 4 – 7 | light rain | — |
-| 7 – 10 | thunderstorm | — |
-| 10 – 13 | Signal No. 3 | T3 |
-| 13 – 18 | Signal No. 8 | T8 |
-| > 18 | black rainstorm | BLACK |
-
-**2. Next storm** — the first heavy day in the next 30 days. Even on a clear day, you see where the weather turns.
-
-**3. What to do first** — one thing, not a list. Ranked by *"you should already have started"* (due date minus the preparation window), not by weight.
-
-**4. Two kinds of events**
-
-| | `submit` | `happen` |
-|---|---|---|
-| Examples | lab, report, presentation | exam, in-class interview, quiz |
-| Completion | tick it off | none — only **preparedness** |
-| Ends by | you tick it | time passes |
-
-An exam cannot be submitted, but you can watch your readiness climb from 0% to 100%.
+真实的感受不是「我有 19 个任务」，而是「要塌了，但我不知道该先救哪一块」。
 
 ---
 
-## Event types and their pressure curves
+## 它做什么
 
-| Type | kind | weight | window | curve |
+**1. 今日天气** —— 每一天根据压在它身上的截止时间，得到一个天气状态。
+
+| 压力值 | 天气 | 信号 |
+|---|---|---|
+| 0 | 晴 | — |
+| 0.01 – 2 | 多云 | — |
+| 2 – 4 | 阴 | — |
+| 4 – 7 | 小雨 | — |
+| 7 – 10 | 雷暴 | — |
+| 10 – 13 | 三号风球 | T3 |
+| 13 – 18 | 八号风球 | T8 |
+| > 18 | 黑色暴雨 | BLACK |
+
+**2. 下一场风暴** —— 未来 30 天里第一个会塌的日子。哪怕今天晴，你也知道风暴在哪。
+
+**3. 现在做这一件** —— 只给一件事，不给清单。排序依据是「**你本该哪天开始**」（截止日减去准备窗口），而不是权重。
+
+**4. 两种事项**
+
+| | `submit` 提交型 | `happen` 发生型 |
+|---|---|---|
+| 例子 | lab、报告、汇报 | 考试、课上抽查、随堂测 |
+| 完成动作 | 勾掉 | 没有完成动作，只有**准备度** |
+| 结束方式 | 你勾掉 | 时间过去，自动经过 |
+
+一场考试没法"提交"，但你可以看着准备度从 0% 走到 100%。
+
+---
+
+## 类型与压力曲线
+
+| 类型 | kind | 权重 | 准备窗口 | 曲线 |
 |---|---|---|---|---|
-| `lab` | submit | 2 | 7 days | steady |
-| `per` | submit | 3 | 5 days | stepped |
-| `interview` | happen | 3 | 3 days | steep |
-| `quiz` | happen | 3 | 5 days | steep |
-| `exam` | happen | 4 | 10 days | long ramp |
+| `lab` | submit | 2 | 7 天 | 平稳 |
+| `per`（汇报） | submit | 3 | 5 天 | 台阶 |
+| `interview`（抽查） | happen | 3 | 3 天 | 陡升 |
+| `quiz` | happen | 3 | 5 天 | 陡升 |
+| `exam` | happen | 4 | 10 天 | 长坡 |
 
-The curve decides **when the weather starts turning**. A 10-day exam window makes early November look overcast; a lab does not.
+曲线决定**天气从哪天开始变坏**。10 天窗口的考试会让 11 月初就显阴，一个 lab 不会。
 
 ---
 
-## Pressure model
+## 压力模型
 
 ```
-P(day) = Σ over unfinished events: weight × shape(daysUntilDue, leadDays, curve)
+P(day) = Σ 未完成事项: weight × shape(距截止天数, 准备窗口, 曲线)
 ```
 
-- on the due day: factor 1.0
-- before it: ramps 0 → 0.85 along the curve
-- after it: zero
+- 截止当天：系数 1.0
+- 截止之前：沿曲线从 0 升到 0.85
+- 截止之后：归零
 
-Today's exam always beats next week's exam. That asymmetry is the whole point.
-
----
-
-## Run it
-
-```bash
-node scripts/report.mjs
-```
-
-Prints the November weather table, today's forecast, and the priority ranking.
+今天的考试，永远比下周的考试更糟。这个不对称就是全部重点。
 
 ---
 
-## Data
+## 运行
 
-`data/semester.json` — 19 events across 5 courses, anonymized. Real calendar, real pressure.
+直接用浏览器打开 `index.html` 即可，无需构建、无需依赖。
+
+数据在 `app.js` 顶部的 `EVENTS` 常量里，也可以在控制台里调 `window.__storm` 做实验。
 
 ---
 
-<sub>Built during BUHACK 2.0 (Nov 13–15, 2026), HKBU Coding Club.</sub>
+## 数据
+
+`data/semester.json` —— 19 个事项，5 门课，已脱敏。真实日历，真实压力。
+
+---
+
+<sub>BUHACK 2.0（2026 年 11 月 13–15 日）· HKBU Coding Club</sub>
