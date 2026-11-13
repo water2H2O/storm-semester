@@ -7,24 +7,52 @@
 <meta name="description" content="把一学期的截止日期变成天气。你的学期也有天气预报。">
 <link rel="stylesheet" href="styles.css">
 </head>
-<body data-weather="storm">
+<body data-weather="storm" data-mode="city">
+
+  <!-- 城市层：始终铺满，永不消失，只是被上面的 UI 盖住多少 -->
   <div class="sky" aria-hidden="true">
     <div class="sky-layer sky-a"></div>
     <div class="sky-layer sky-b"></div>
   </div>
-
   <canvas id="sky3d" aria-hidden="true"></canvas>
-
   <div class="rain" id="rain" aria-hidden="true"></div>
   <div class="flash" id="flash" aria-hidden="true"></div>
 
-  <main class="wrap">
-    <header class="top">
+  <!-- 静止态：城市全屏展示时浮在上面的极简信息条 -->
+  <div class="city-hud" id="cityHud">
+    <div class="city-hud-top">
       <div class="brand">
         <span class="dot"></span>
         Storm Semester
       </div>
       <div class="theme-tag">EdTech</div>
+    </div>
+
+    <div class="city-hud-main">
+      <div class="city-weather">
+        <span class="city-icon" id="cityIcon">⛈️</span>
+        <span class="city-title" id="cityTitle">雷暴</span>
+      </div>
+      <div class="city-sub" id="citySub">今天有 0 个事项到期</div>
+      <div class="city-next" id="cityNext">下一场风暴：黑色暴雨 · 周五 11/13 · 还有 4 天</div>
+    </div>
+
+    <button class="city-enter" id="cityEnter" type="button">
+      查看学期详情
+      <span class="city-enter-arrow">↑</span>
+    </button>
+  </div>
+
+  <!-- 交互态：完整数据界面，向上滑入 -->
+  <main class="wrap" id="appMain">
+    <div class="wrap-drag" id="wrapDrag" aria-hidden="true"></div>
+
+    <header class="top">
+      <div class="brand">
+        <span class="dot"></span>
+        Storm Semester
+      </div>
+      <button class="theme-tag city-back" id="cityBack" type="button">← 回到城市</button>
     </header>
 
     <section class="hero">

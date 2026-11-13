@@ -238,6 +238,15 @@ function render() {
   }
   $("timeline").innerHTML = tl.join("");
 
+  /* --- 城市悬浮条（静止态展示） --- */
+  $("cityIcon").textContent = w.level.icon;
+  $("cityTitle").textContent = w.level.label;
+  $("citySub").textContent =
+    w.count > 0 ? `今天有 ${w.count} 个事项到期` : "今天没有截止";
+  $("cityNext").textContent = storm
+    ? `下一场风暴：${storm.level.label} · ${dowOf(storm.key)} ${mdOf(storm.key)} · 还有 ${storm.inDays} 天`
+    : "未来 30 天风平浪静";
+
   /* --- 驱动 3D 场景 --- */
   if (window.STORM_SCENE && window.STORM_SCENE.setWeather) {
     window.STORM_SCENE.setWeather(w.level.key);
@@ -277,6 +286,50 @@ function focusTemplate(p, today) {
     <div class="focus-meta">${dowOf(p.dueKey)} ${mdOf(p.dueKey)} · ${when} ${late}</div>
     ${checklist ? `<ul class="checklist">${checklist}</ul>` : ""}
     ${action}`;
+}
+
+/* ---------------- 城市态 / 数据态 ---------------- */
+function setMode(mode) {
+  if (document.body.dataset.mode === mode) return;
+  document.body.dataset.mode = mode;
+  if (mode === "data") $("appMain").scrollTop = 0;
+  if (window.STORM_SCENE && window.STORM_SCENE.setMode) window.STORM_SCENE.setMode(mode);
+}
+
+function bindModeGestures() {
+  const main = $("appMain");
+  $("cityEnter").addEventListener("click", () => setMode("data"));
+  $("cityBack").addEventListener("click", () => setMode("city"));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") setMode("city");
+  });
+
+  // 滚轮：城市态往下滚 → 升起面板；面板在顶部时往上滚 → 回到城市
+  let wheelLock = 0;
+  window.addEventListener("wheel", (e) => {
+    const now = performance.now();
+    if (now < wheelLock) return;
+    const mode = document.body.dataset.mode;
+    if (mode === "city" && e.deltaY > 20) {
+      setMode("data");
+      wheelLock = now + 700;
+    } else if (mode === "data" && e.deltaY < -20 && main.scrollTop <= 0) {
+      setMode("city");
+      wheelLock = now + 700;
+    }
+  }, { passive: true });
+
+  // 触屏：上滑升起，面板在顶部时下滑收回
+  let startY = null;
+  window.addEventListener("touchstart", (e) => { startY = e.touches[0].clientY; }, { passive: true });
+  window.addEventListener("touchend", (e) => {
+    if (startY === null) return;
+    const dy = e.changedTouches[0].clientY - startY;
+    startY = null;
+    const mode = document.body.dataset.mode;
+    if (mode === "city" && dy < -50) setMode("data");
+    else if (mode === "data" && dy > 70 && main.scrollTop <= 0) setMode("city");
+  }, { passive: true });
 }
 
 /* ---------------- 交互 ---------------- */
@@ -346,9 +399,13 @@ function boot() {
   } else {
     loadState();
   }
-  initRain();
+  // 有 3D 场景时雨和闪电交给 3D，CSS 那层只作降级
+  if (window.STORM_SCENE) document.body.classList.add("has-3d");
+  else initRain();
   bindEvents();
+  bindModeGestures();
   render();
+  if (location.search.includes("data")) setMode("data"); // ?data 直接打开面板，方便演示和截图
 
   // 调试方便
   window.__storm = { EVENTS, doneIds, weatherOn, nextStorm, priorities, render, LEVELS };

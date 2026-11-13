@@ -334,10 +334,11 @@
   });
   canvas.addEventListener('pointerup', () => { dragging = false; });
   canvas.addEventListener('pointercancel', () => { dragging = false; });
-  canvas.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    zoom = Math.max(0.82, Math.min(1.3, zoom + e.deltaY * 0.0004));
-  }, { passive: false });
+
+  // 城市态镜头更近更低，数据态拉远抬高、让出画面给面板
+  let mode = 'city';
+  let modeMix = 0; // 0 = city, 1 = data
+  function setMode(m) { mode = m; }
 
   /* ---------------- 尺寸 ---------------- */
   function resize() {
@@ -418,9 +419,11 @@
 
     // 相机
     const wide = camera.userData.wide || 1;
-    const angle = 0.72 + Math.sin(time * 0.16) * 0.3 + yaw;
-    const elev = 0.36 + pitch;
-    const dist = 98 * zoom * wide;
+    modeMix = lerp(modeMix, mode === 'data' ? 1 : 0, 1 - Math.pow(0.02, dt));
+    if (!dragging) yaw *= Math.pow(0.6, dt); // 松手后慢慢回到自动环绕
+    const angle = 0.72 + time * 0.05 + yaw;
+    const elev = lerp(0.3, 0.55, modeMix) + pitch;
+    const dist = lerp(78, 112, modeMix) * zoom * wide;
     camera.position.set(
       Math.sin(angle) * Math.cos(elev) * dist,
       Math.sin(elev) * dist + 6,
@@ -435,6 +438,7 @@
   /* ---------------- 对外接口 ---------------- */
   window.STORM_SCENE = {
     setWeather,
+    setMode,
     scene,
     world,
     camera,
