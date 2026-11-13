@@ -32,7 +32,7 @@ STORM_CITIES.register({
           const lo = Math.max(bottom, top - 1.15);
           if (top > bottom) {
             voxel(x, (top + lo) / 2, z, 1.76, top - lo + 0.06, 1.76,
-              ROCK[(k + Math.floor(x + z)) % 5]);
+              ROCK[(((k + Math.floor(x + z)) % 5) + 5) % 5]);
           }
         }
         voxel(x, 0.2, z, 1.76, 0.42, 1.76, GRASS[Math.floor((x + 30) / 3) % 4]);

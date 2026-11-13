@@ -55,6 +55,11 @@
   fill.position.set(22, 16, -26);
   scene.add(fill);
 
+  // 浮空岛的底部本来没有光照，会黑成一团。给一盏很弱的反向补光。
+  const under = new THREE.DirectionalLight(0x7f93b5, 0.45);
+  under.position.set(0, -55, 12);
+  scene.add(under);
+
   scene.fog = new THREE.Fog(0xc6e8ff, 80, 220);
 
   /* ---------------- 基础工具 ---------------- */
@@ -516,7 +521,9 @@
     camElev = lerp(camElev, camElevWanted, k);
 
     if (!dragging) yaw *= Math.pow(0.6, dt);
-    const angle = 0.72 + time * 0.05 + yaw;
+    // 基准朝向放在九龙一侧（z 负），这样镜头看到的永远是
+    // 「维港 + 港岛天际线 + 太平山作背景」，而不是港岛背面。
+    const angle = Math.PI + Math.sin(time * 0.055) * 0.7 + yaw;
     const elev = camElev + modeMix * 0.22 + pitch;
     const dist = camDist * lerp(1, 1.4, modeMix) * zoom * wide;
     camera.position.set(
