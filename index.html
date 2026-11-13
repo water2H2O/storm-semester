@@ -9,7 +9,7 @@
 </head>
 <body data-weather="storm" data-mode="city">
 
-  <!-- 城市层：始终铺满，永不消失，只是被上面的 UI 盖住多少 -->
+  <!-- 城市层：始终铺满 -->
   <div class="sky" aria-hidden="true">
     <div class="sky-layer sky-a"></div>
     <div class="sky-layer sky-b"></div>
@@ -18,14 +18,14 @@
   <div class="rain" id="rain" aria-hidden="true"></div>
   <div class="flash" id="flash" aria-hidden="true"></div>
 
-  <!-- 静止态：城市全屏展示时浮在上面的极简信息条 -->
+  <!-- 城市态：浮在城市上方的极简信息条 -->
   <div class="city-hud" id="cityHud">
     <div class="city-hud-top">
       <div class="brand">
         <span class="dot"></span>
         Storm Semester
       </div>
-      <div class="theme-tag">EdTech</div>
+      <div class="city-switch" id="citySwitchHud" role="group" aria-label="选择城市"></div>
     </div>
 
     <div class="city-hud-main">
@@ -43,16 +43,19 @@
     </button>
   </div>
 
-  <!-- 交互态：完整数据界面，向上滑入 -->
+  <!-- 数据态：完整界面，向上滑入 -->
   <main class="wrap" id="appMain">
-    <div class="wrap-drag" id="wrapDrag" aria-hidden="true"></div>
+    <div class="wrap-drag" aria-hidden="true"></div>
 
     <header class="top">
       <div class="brand">
         <span class="dot"></span>
         Storm Semester
       </div>
-      <button class="theme-tag city-back" id="cityBack" type="button">← 回到城市</button>
+      <div class="top-actions">
+        <div class="city-switch" id="citySwitch" role="group" aria-label="选择城市"></div>
+        <button class="theme-tag city-back" id="cityBack" type="button">← 回到城市</button>
+      </div>
     </header>
 
     <section class="hero">
@@ -88,9 +91,42 @@
     </section>
 
     <section class="timeline">
-      <div class="section-label">未来 14 天</div>
+      <div class="section-label">未来三周</div>
       <div class="timeline-scroll" id="timeline"></div>
       <div class="timeline-hint">越远越模糊 —— 远期预报本来就不准</div>
+    </section>
+
+    <section class="manage">
+      <div class="section-label">事项管理</div>
+      <div class="event-list" id="eventList"></div>
+      <button class="btn add-btn" id="addEventBtn" type="button">+ 新增事项</button>
+
+      <form class="event-form" id="eventForm" hidden>
+        <label class="field">
+          <span>名称</span>
+          <input name="title" type="text" required maxlength="40" placeholder="例如 小组项目提交" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>类型</span>
+          <select name="type" id="eventType"></select>
+        </label>
+        <label class="field">
+          <span>截止 / 发生时间</span>
+          <input name="due" type="datetime-local" required>
+        </label>
+        <label class="field">
+          <span>压力权重 <output id="weightOut">3</output></span>
+          <input name="weight" type="range" min="1" max="6" step="0.5" value="3">
+        </label>
+        <label class="field">
+          <span>准备窗口 <output id="leadOut">7</output> 天</span>
+          <input name="leadDays" type="range" min="1" max="21" step="1" value="7">
+        </label>
+        <div class="form-actions">
+          <button class="btn primary" type="submit">加入学期</button>
+          <button class="btn" type="button" id="cancelAdd">取消</button>
+        </div>
+      </form>
     </section>
 
     <footer class="foot">
@@ -100,7 +136,15 @@
   </main>
 
   <script src="three.min.js"></script>
+  <script>
+    /* 城市注册表：cities/*.js 在 scene3d.js 之前把自己登记进来 */
+    window.STORM_CITIES = { list: [], register: function (c) { this.list.push(c); return c.id; } };
+  </script>
+  <script src="cities/generic.js"></script>
+  <script src="cities/hongkong.js"></script>
   <script src="scene3d.js"></script>
+  <script src="engine.js"></script>
+  <script src="store.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

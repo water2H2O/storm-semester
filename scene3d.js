@@ -1,7 +1,9 @@
 /* ============================================================
-   Storm Semester — 3D 浮空岛背景
-   程序化体素地形 + 天气驱动光照/雾/雨/闪电
-   暴露 window.STORM_SCENE.setWeather(key)
+   Storm Semester — 3D 场景核心
+   ------------------------------------------------------------
+   负责：渲染器、灯光、雾、雨、闪电、云、镜头、天气切换、
+        窗户亮灯、城市注册与切换。
+   城市本身（地形 + 建筑）由 cities/*.js 通过 STORM_CITIES.register 提供。
    ============================================================ */
 (function () {
   'use strict';
@@ -13,10 +15,7 @@
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance',
+      canvas, antialias: true, alpha: true, powerPreference: 'high-performance',
     });
   } catch (e) {
     canvas.style.display = 'none';
@@ -36,7 +35,6 @@
   const scene = new THREE.Scene();
   const world = new THREE.Group();
   scene.add(world);
-
   const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 500);
 
   /* ---------------- 灯光 ---------------- */
@@ -65,15 +63,15 @@
     seed = (seed * 1664525 + 1013904223) >>> 0;
     return seed / 4294967296;
   };
-  const pick = (a) => a[Math.floor(rand() * a.length)];
 
   const mats = new Map();
-  const mat = (c) => {
+  function mat(c) {
     if (!mats.has(c)) {
       mats.set(c, new THREE.MeshStandardMaterial({ color: c, roughness: 0.84, metalness: 0 }));
     }
     return mats.get(c);
-  };
+  }
+  const sharedMats = new Set();
 
   const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
 
@@ -104,112 +102,16 @@
     return cyl(parent, x, y, z, 0, r, h, c, n || 4);
   }
 
-  const anims = [];
-  const addAnim = (f) => anims.push(f);
-
-  /* ---------------- 地形 ---------------- */
-  const voxels = [];
-  const v = (x, y, z, w, h, d, c, ry) => voxels.push({ x, y, z, w, h, d, c, ry: ry || 0 });
-
-  const GRASS = [0x6ca24c, 0x78ae54, 0x84ba5b, 0x5f9646];
-  const ROCK = [0x8f6a4d, 0xb07f52, 0xcf9a63, 0x7a6454, 0xa87f57];
-
-  const inside = (x, z) => {
-    const a = Math.atan2(z / 20, x / 29);
-    const r = Math.sqrt((x / 29) ** 2 + (z / 20) ** 2);
-    return r < 1 + 0.05 * Math.sin(7 * a) + 0.035 * Math.cos(11 * a);
-  };
-
-  const STEP = 1.7;
-  for (let x = -29; x <= 29; x += STEP) {
-    for (let z = -20; z <= 20; z += STEP) {
-      if (!inside(x, z)) continue;
-      const r = Math.sqrt((x / 30) ** 2 + (z / 21) ** 2);
-      const bottom = -2.6 - 6.5 * Math.max(0, 1 - r) + rand() * 1.4;
-
-      for (let k = 0; k < 4; k++) {
-        const top = -k * 1.15;
-        const lo = Math.max(bottom, top - 1.15);
-        if (top > bottom) {
-          v(x, (top + lo) / 2, z, 1.76, top - lo + 0.06, 1.76, ROCK[(k + Math.floor(x + z)) % 5]);
-        }
-      }
-      v(x, 0.2, z, 1.76, 0.42, 1.76, GRASS[(Math.floor((x + 30) / 3) % 4)]);
-    }
+  function beam(parent, a, b, r, c) {
+    const va = new THREE.Vector3(...a);
+    const vb = new THREE.Vector3(...b);
+    const dir = vb.clone().sub(va);
+    const m = cyl(parent, ...va.clone().add(vb).multiplyScalar(0.5).toArray(), r, r, dir.length(), c, 6);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+    return m;
   }
 
-  /* 小树 */
-  for (let i = 0; i < 130; i++) {
-    const x = (rand() - 0.5) * 52;
-    const z = (rand() - 0.5) * 36;
-    if (!inside(x, z)) continue;
-    const h = 1.2 + rand() * 1.4;
-    v(x, 0.4 + h / 2, z, 0.26, h, 0.26, 0x78593e);
-    const c = pick([0x40793f, 0x559447, 0x6aa84f]);
-    for (let j = 0; j < 4; j++) {
-      const s = 1.05 - j * 0.2;
-      v(x, 0.4 + h + j * 0.42, z, s, 0.62, s, c);
-    }
-  }
-
-  /* ---------------- 建筑群 ---------------- */
-  const BUILDING_COLORS = [0xd8c9a8, 0xc4b590, 0xe0d4b8, 0xb9a98a];
-  const ROOF_COLORS = [0x5a6072, 0x6b4a44, 0x47505f];
-
-  const landmarkGroups = [];
-
-  function placeBuilding(x, z, w, h, d) {
-    const g = new THREE.Group();
-    g.position.set(x, 0.42, z);
-    world.add(g);
-
-    const body = pick(BUILDING_COLORS);
-    box(g, 0, h / 2, 0, w, h, d, body);
-
-    // 窗户：两面各一排
-    const glass = new THREE.MeshStandardMaterial({
-      color: 0x2b4a63, roughness: 0.25, metalness: 0.5,
-      emissive: 0x0d1b26, emissiveIntensity: 1,
-    });
-    const rows = Math.max(2, Math.floor(h / 1.5));
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < 3; c++) {
-        const wx = -w / 2 + (c + 0.5) * (w / 3);
-        const wy = 0.9 + r * (h - 1.2) / rows;
-        box(g, wx, wy, d / 2 + 0.04, w / 5, 0.42, 0.06, glass);
-        box(g, wx, wy, -d / 2 - 0.04, w / 5, 0.42, 0.06, glass);
-      }
-    }
-
-    // 屋顶
-    const roof = cone(g, 0, h + 0.35, 0, Math.max(w, d) * 0.62, 0.9, pick(ROOF_COLORS), 4);
-    roof.rotation.y = Math.PI / 4;
-
-    landmarkGroups.push({ name: 'building', position: g.position.clone() });
-    return g;
-  }
-
-  const spots = [[-13, 4], [-4, -7], [7, 3], [15, -5], [-9, 12], [12, 11], [-18, -9]];
-  spots.forEach(([x, z], i) => {
-    placeBuilding(x, z, 3.2 + (i % 3) * 0.9, 2.6 + (i % 4) * 1.1, 3.0 + (i % 2) * 0.8);
-  });
-
-  /* 钟楼 */
-  (function clockTower() {
-    const g = new THREE.Group();
-    g.position.set(0, 0.42, 0);
-    world.add(g);
-    box(g, 0, 3, 0, 1.7, 6, 1.7, 0xd8cbb0);
-    box(g, 0, 6.3, 0, 2.1, 0.5, 2.1, 0x5a6072);
-    cyl(g, 0, 7.6, 0, 0.05, 1.0, 2.2, 0x5a6072, 4);
-    const face = new THREE.MeshStandardMaterial({
-      color: 0xf5efdd, roughness: 0.9, emissive: 0x332e20, emissiveIntensity: 1,
-    });
-    box(g, 0, 5.2, 0.88, 1.0, 1.0, 0.06, face);
-    box(g, 0, 5.2, -0.88, 1.0, 1.0, 0.06, face);
-  })();
-
-  /* ---------------- 云 ---------------- */
+  /* ---------------- 云（属于场景，不属于城市） ---------------- */
   const cloudMat = new THREE.MeshStandardMaterial({
     color: 0xf5fcff, roughness: 1, transparent: true, opacity: 0.85,
   });
@@ -225,30 +127,8 @@
     }
     world.add(g);
     const baseX = g.position.x;
-    addAnim((t) => { g.position.x = baseX + 1.6 * Math.sin(t * 0.25 + i); });
-    clouds.push(g);
+    clouds.push({ g, baseX, phase: i });
   }
-
-  /* ---------------- 地形实例化 ---------------- */
-  const inst = new THREE.InstancedMesh(
-    cubeGeo,
-    new THREE.MeshStandardMaterial({ roughness: 0.92 }),
-    voxels.length,
-  );
-  const dummy = new THREE.Object3D();
-  const tmpColor = new THREE.Color();
-  voxels.forEach((o, i) => {
-    dummy.position.set(o.x, o.y, o.z);
-    dummy.scale.set(o.w, o.h, o.d);
-    dummy.rotation.set(0, o.ry, 0);
-    dummy.updateMatrix();
-    inst.setMatrixAt(i, dummy.matrix);
-    inst.setColorAt(i, tmpColor.setHex(o.c));
-  });
-  if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
-  inst.castShadow = true;
-  inst.receiveShadow = true;
-  world.add(inst);
 
   /* ---------------- 雨 ---------------- */
   const RAIN_COUNT = 1500;
@@ -270,7 +150,6 @@
   }
   const rainGeo = new THREE.BufferGeometry();
   rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-
   const rainMat = new THREE.LineBasicMaterial({
     color: 0xbfe4ff, transparent: true, opacity: 0, depthWrite: false,
   });
@@ -290,23 +169,27 @@
     black:    { sun: 0.16, sunC: 0x9d7ec9, hemi: 0.6, hemiSky: 0x3c2a55, hemiG: 0x1c1826, fog: 0x140c1f, near: 30, far: 120, rain: 1.15, flash: 1.00, exposure: 0.80, cloud: 1.00 },
   };
 
-  let current = PRESETS.storm;
+  let current = Object.assign({}, PRESETS.storm);
   let target = PRESETS.storm;
   let flashEnergy = 0;
   let flashCooldown = 1.5;
   let flashChance = 0;
 
   const lerp = (a, b, t) => a + (b - a) * t;
-  const colorLerp = (from, to, t) => {
-    const c = new THREE.Color(from);
-    c.lerp(new THREE.Color(to), t);
-    return c;
-  };
+  const colorLerp = (from, to, t) => new THREE.Color(from).lerp(new THREE.Color(to), t);
 
   function setWeather(key) {
     const p = PRESETS[key] || PRESETS.cloudy;
     target = p;
     flashChance = p.flash;
+  }
+
+  /* ---------------- 压力 → 窗户亮灯 ---------------- */
+  let windowHeat = 0;      // 目标值 0..1
+  let windowHeatNow = 0;   // 平滑后的值
+
+  function setPressure(score) {
+    windowHeat = Math.max(0, Math.min(1, score / 20));
   }
 
   /* ---------------- 相机 ---------------- */
@@ -318,6 +201,17 @@
   let yaw = 0;
   let pitch = 0;
   let zoom = 1;
+
+  let mode = 'city';
+  let modeMix = 0;
+  function setMode(m) { mode = m; }
+
+  let camTarget = new THREE.Vector3(0, 1.2, 0);
+  let camTargetWanted = new THREE.Vector3(0, 1.2, 0);
+  let camDist = 78;
+  let camDistWanted = 78;
+  let camElev = 0.3;
+  let camElevWanted = 0.3;
 
   canvas.addEventListener('pointerdown', (e) => {
     dragging = true;
@@ -335,24 +229,160 @@
   canvas.addEventListener('pointerup', () => { dragging = false; });
   canvas.addEventListener('pointercancel', () => { dragging = false; });
 
-  // 城市态镜头更近更低，数据态拉远抬高、让出画面给面板
-  let mode = 'city';
-  let modeMix = 0; // 0 = city, 1 = data
-  function setMode(m) { mode = m; }
-
   /* ---------------- 尺寸 ---------------- */
   function resize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    // 竖屏时拉远一点，避免岛被切掉
-    const wide = Math.max(1, 1.35 / camera.aspect);
     camera.updateProjectionMatrix();
-    camera.userData.wide = wide;
+    camera.userData.wide = Math.max(1, 1.35 / camera.aspect);
   }
   window.addEventListener('resize', resize);
   resize();
+
+  /* ============================================================
+     城市注册与切换
+     ============================================================ */
+  const registry = (window.STORM_CITIES && window.STORM_CITIES.list) || [];
+  const byId = new Map();
+  registry.forEach((c) => byId.set(c.id, c));
+
+  let cityGroup = null;
+  let cityAnims = [];
+  let cityWindowMats = [];
+  let cityMats = [];
+  let currentCityId = null;
+
+  function disposeCity() {
+    if (!cityGroup) return;
+    world.remove(cityGroup);
+    cityGroup.traverse((o) => {
+      if (o.isMesh || o.isInstancedMesh) {
+        if (o.geometry && o.geometry !== cubeGeo) o.geometry.dispose();
+      }
+    });
+    cityMats.forEach((m) => { if (!sharedMats.has(m)) m.dispose(); });
+    cityGroup = null;
+    cityAnims = [];
+    cityWindowMats = [];
+    cityMats = [];
+  }
+
+  /**
+   * 建一座城市。
+   * 城市文件只需要在 api 上摆东西，光照、雾、雨、镜头都由场景统一负责。
+   */
+  function buildCity(id) {
+    const def = byId.get(id) || registry[0];
+    if (!def) return null;
+
+    disposeCity();
+    cityGroup = new THREE.Group();
+    world.add(cityGroup);
+
+    const voxels = [];
+    const cityMat = (c) => {
+      const m = mat(c);
+      if (!cityMats.includes(m)) cityMats.push(m);
+      return m;
+    };
+
+    const api = {
+      THREE,
+      group: cityGroup,
+      box: (x, y, z, w, h, d, c, ry) => {
+        if (typeof c === 'object' && !cityMats.includes(c)) cityMats.push(c);
+        return box(cityGroup, x, y, z, w, h, d, c, ry);
+      },
+      cyl: (x, y, z, rt, rb, h, c, n) => {
+        if (typeof c === 'object' && !cityMats.includes(c)) cityMats.push(c);
+        return cyl(cityGroup, x, y, z, rt, rb, h, c, n);
+      },
+      cone: (x, y, z, r, h, c, n) => {
+        if (typeof c === 'object' && !cityMats.includes(c)) cityMats.push(c);
+        return cone(cityGroup, x, y, z, r, h, c, n);
+      },
+      beam: (a, b, r, c) => beam(cityGroup, a, b, r, c),
+      mat: cityMat,
+      voxel: (x, y, z, w, h, d, c, ry) => voxels.push({ x, y, z, w, h, d, c, ry: ry || 0 }),
+      addAnim: (f) => cityAnims.push(f),
+      rand,
+    };
+
+    let meta = {};
+    try {
+      meta = def.build(api) || {};
+    } catch (err) {
+      console.error('[city] build failed:', def.id, err);
+    }
+
+    // 体素地形合批成一次 draw call
+    if (voxels.length) {
+      const inst = new THREE.InstancedMesh(
+        cubeGeo,
+        new THREE.MeshStandardMaterial({ roughness: 0.92 }),
+        voxels.length,
+      );
+      const dummy = new THREE.Object3D();
+      const tmp = new THREE.Color();
+      voxels.forEach((o, i) => {
+        dummy.position.set(o.x, o.y, o.z);
+        dummy.scale.set(o.w, o.h, o.d);
+        dummy.rotation.set(0, o.ry, 0);
+        dummy.updateMatrix();
+        inst.setMatrixAt(i, dummy.matrix);
+        inst.setColorAt(i, tmp.setHex(o.c));
+      });
+      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+      inst.castShadow = true;
+      inst.receiveShadow = true;
+      cityGroup.add(inst);
+      cityMats.push(inst.material);
+    }
+
+    // 窗户材质：记下基准自发光，之后按压力调
+    cityWindowMats = (meta.windowMaterials || []).map((m) => {
+      m.userData.baseEmissive = m.emissiveIntensity || 0.1;
+      if (!cityMats.includes(m)) cityMats.push(m);
+      return m;
+    });
+
+    // 镜头取景
+    const cam = meta.camera || {};
+    camTargetWanted.set(...(cam.target || [0, 1.2, 0]));
+    camDistWanted = cam.distance || 80;
+    camElevWanted = cam.elev || 0.32;
+
+    currentCityId = def.id;
+    return def.id;
+  }
+
+  function setCity(id) {
+    if (id === currentCityId) return currentCityId;
+    // 切城市时给一个淡入：先把世界压暗
+    switchFade = 1;
+    return buildCity(id);
+  }
+
+  let switchFade = 0;
+
+  /* ---------------- 对外接口 ---------------- */
+  window.STORM_SCENE = {
+    setWeather,
+    setPressure,
+    setMode,
+    setCity,
+    buildCity,
+    registerCity(def) {
+      byId.set(def.id, def);
+      if (!registry.includes(def)) registry.push(def);
+      return def.id;
+    },
+    cities: () => registry.map((c) => ({ id: c.id, label: c.label })),
+    get currentCity() { return currentCityId; },
+    scene, world, camera, THREE,
+  };
 
   /* ---------------- 主循环 ---------------- */
   function frame(now) {
@@ -360,7 +390,6 @@
     last = now;
     time += dt;
 
-    // 平滑过渡
     const k = 1 - Math.pow(0.01, dt * 0.9);
     current.sun = lerp(current.sun, target.sun, k);
     current.hemi = lerp(current.hemi, target.hemi, k);
@@ -378,8 +407,14 @@
     scene.fog.color.copy(colorLerp(scene.fog.color.getHex(), target.fog, k));
     scene.fog.near = current.near;
     scene.fog.far = current.far;
-    renderer.toneMappingExposure = current.exposure;
+    renderer.toneMappingExposure = current.exposure - switchFade * 0.5;
     cloudMat.opacity = 0.55 + current.cloud * 0.4;
+    if (switchFade > 0) switchFade = Math.max(0, switchFade - dt * 2.2);
+
+    // 窗户：压力越大亮得越多
+    windowHeatNow = lerp(windowHeatNow, windowHeat, 1 - Math.pow(0.05, dt));
+    const lit = 0.06 + windowHeatNow * 1.5;
+    cityWindowMats.forEach((m) => { m.emissiveIntensity = lit; });
 
     // 雨
     rainMat.opacity = Math.min(0.75, current.rain * 0.65);
@@ -391,7 +426,7 @@
         const o = i * 6;
         const len = rainSeed[i * 4];
         const sp = rainSeed[i * 4 + 1];
-        const fall = (speedBase * (sp / 26)) * dt;
+        const fall = speedBase * (sp / 26) * dt;
         arr[o + 1] -= fall;
         arr[o + 4] -= fall;
         arr[o] += dt * 2.4;
@@ -415,51 +450,34 @@
     flashEnergy *= Math.pow(0.02, dt);
 
     // 动画
-    anims.forEach((f) => f(time));
+    clouds.forEach((c) => {
+      c.g.position.x = c.baseX + 1.6 * Math.sin(time * 0.25 + c.phase);
+    });
+    cityAnims.forEach((f) => f(time));
 
     // 相机
     const wide = camera.userData.wide || 1;
     modeMix = lerp(modeMix, mode === 'data' ? 1 : 0, 1 - Math.pow(0.02, dt));
-    if (!dragging) yaw *= Math.pow(0.6, dt); // 松手后慢慢回到自动环绕
+    camTarget.lerp(camTargetWanted, k);
+    camDist = lerp(camDist, camDistWanted, k);
+    camElev = lerp(camElev, camElevWanted, k);
+
+    if (!dragging) yaw *= Math.pow(0.6, dt);
     const angle = 0.72 + time * 0.05 + yaw;
-    const elev = lerp(0.3, 0.55, modeMix) + pitch;
-    const dist = lerp(78, 112, modeMix) * zoom * wide;
+    const elev = camElev + modeMix * 0.22 + pitch;
+    const dist = camDist * lerp(1, 1.4, modeMix) * zoom * wide;
     camera.position.set(
       Math.sin(angle) * Math.cos(elev) * dist,
       Math.sin(elev) * dist + 6,
       Math.cos(angle) * Math.cos(elev) * dist,
     );
-    camera.lookAt(0, 1.2, 0);
+    camera.lookAt(camTarget.x, camTarget.y, camTarget.z);
 
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
 
-  /* ---------------- 对外接口 ---------------- */
-  window.STORM_SCENE = {
-    setWeather,
-    setMode,
-    scene,
-    world,
-    camera,
-    THREE,
-    /* 给后面加地标用：传一个 (api) => void 的函数，api 里有 group / box / cyl / cone / mat */
-    addLandmark(name, position, build) {
-      const g = new THREE.Group();
-      g.position.set(position[0], position[1] ?? 0.42, position[2]);
-      world.add(g);
-      build({
-        THREE, group: g,
-        box: (x, y, z, w, h, d, c, ry) => box(g, x, y, z, w, h, d, c, ry),
-        cyl: (x, y, z, rt, rb, h, c, n) => cyl(g, x, y, z, rt, rb, h, c, n),
-        cone: (x, y, z, r, h, c, n) => cone(g, x, y, z, r, h, c, n),
-        mat, addAnim, rand,
-      });
-      landmarkGroups.push({ name, position: g.position.clone() });
-      return g;
-    },
-    stats: { voxels: voxels.length, clouds: clouds.length, rain: RAIN_COUNT },
-  };
-
+  // 先建默认城市
+  buildCity(registry.length ? registry[0].id : null);
   requestAnimationFrame(frame);
 })();

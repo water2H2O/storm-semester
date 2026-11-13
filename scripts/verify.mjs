@@ -1,105 +1,91 @@
 /**
- * 数据与引擎自检（不依赖浏览器）
+ * 引擎自检（不依赖浏览器）
  * node scripts/verify.mjs
  */
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const dir = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(dir, "..");
-const src = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const require = createRequire(import.meta.url);
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const m = src.match(/const EVENTS = (\[[\s\S]*?\n\];)/);
-if (!m) {
-  console.error("EVENTS not found in app.js");
-  process.exit(1);
-}
-const EVENTS = eval(m[1].replace(/;\s*$/, ""));
+const E = require(path.join(root, 'engine.js'));
+const S = require(path.join(root, 'store.js'));
 
-/* ---- 数据校验 ---- */
-const ids = new Set();
-let problems = 0;
-for (const e of EVENTS) {
-  if (ids.has(e.id)) { console.error("  duplicate id:", e.id); problems++; }
-  ids.add(e.id);
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(e.due)) { console.error("  bad due:", e.id, e.due); problems++; }
-  if (typeof e.weight !== "number") { console.error("  bad weight:", e.id); problems++; }
-  if (typeof e.leadDays !== "number") { console.error("  bad leadDays:", e.id); problems++; }
-  if (!["submit", "happen"].includes(e.kind)) { console.error("  bad kind:", e.id); problems++; }
-}
-console.log(`events=${EVENTS.length}  problems=${problems}`);
-
-/* ---- 引擎（与 app.js 保持一致） ---- */
-const pad = (n) => String(n).padStart(2, "0");
-const parseKey = (k) => {
-  const [y, mo, d] = k.split("-").map(Number);
-  return new Date(y, mo - 1, d, 12);
-};
-const toKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const shift = (k, n) => {
-  const d = parseKey(k);
-  d.setDate(d.getDate() + n);
-  return toKey(d);
-};
-const daysBetween = (a, b) => Math.round((parseKey(b) - parseKey(a)) / 86400000);
-
-const LEVELS = [
-  ["clear", 0, "晴"],
-  ["cloudy", 0.01, "多云"],
-  ["overcast", 2, "阴"],
-  ["rain", 4, "小雨"],
-  ["storm", 7, "雷暴"],
-  ["t3", 10, "三号风球"],
-  ["t8", 13, "八号风球"],
-  ["black", 18, "黑色暴雨"],
-];
-const levelFor = (s) => {
-  let out = LEVELS[0];
-  for (const l of LEVELS) if (s >= l[1]) out = l;
-  return out;
-};
-
+const events = S.SEED_EVENTS;
 const done = new Set();
+let fail = 0;
 
-function contribution(dayKey, e) {
-  const d = daysBetween(dayKey, e.due.slice(0, 10));
-  if (d < 0) return 0;
-  if (d === 0) return e.weight * 1.3;
-  if (d > e.leadDays) return 0;
-  return e.weight * 0.85 * (1 - d / e.leadDays);
+function ok(name, cond, detail) {
+  if (cond) console.log(`  ✓ ${name}`);
+  else { console.log(`  ✗ ${name}  ${detail || ''}`); fail++; }
 }
 
-function severity(k) {
-  let score = 0;
-  let count = 0;
-  for (const e of EVENTS) {
-    if (done.has(e.id)) continue;
-    score += contribution(k, e);
-    if (e.due.slice(0, 10) === k) count += 1;
-  }
-  return { score: Math.round(score * 10) / 10, count };
+/* ---------- 数据完整性 ---------- */
+console.log('\n[数据]');
+const ids = new Set();
+let dup = 0;
+for (const e of events) {
+  if (ids.has(e.id)) dup++;
+  ids.add(e.id);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(e.due)) { console.log('  bad due', e.id, e.due); fail++; }
+  if (!E.TYPES[e.type]) { console.log('  unknown type', e.id, e.type); fail++; }
 }
+ok(`事项 ${events.length} 条、id 唯一`, dup === 0);
+ok('类型全部已注册', events.every((e) => !!E.TYPES[e.type]));
 
-console.log("\n--- 天气（2026-11-13 为比赛日） ---");
-for (const day of ["2026-11-13", "2026-11-14", "2026-11-15", "2026-11-20", "2026-11-27"]) {
-  const s = severity(day);
-  console.log(`  ${day}  score=${String(s.score).padStart(5)}  count=${s.count}  -> ${levelFor(s.score)[2]}`);
+/* ---------- 天气 ---------- */
+console.log('\n[11 月天气]');
+for (const d of ['2026-11-09', '2026-11-11', '2026-11-13', '2026-11-14', '2026-11-20', '2026-11-27']) {
+  const w = E.weatherOn(d, events, done);
+  console.log(`  ${d}  score=${String(w.score).padStart(5)}  ${w.count} 件  -> ${w.level.label}`);
 }
+const w13 = E.weatherOn('2026-11-13', events, done);
+ok('11/13 是黑色暴雨', w13.level.key === 'black', `实际 ${w13.level.label} (${w13.score})`);
+ok('11/13 有 5 个到期', w13.count === 5, `实际 ${w13.count}`);
 
-console.log("\n--- 勾掉 11/13 的 5 个之后 ---");
-["e05", "e06", "e07", "e08", "e09"].forEach((id) => done.add(id));
-for (const day of ["2026-11-13", "2026-11-14", "2026-11-15", "2026-11-20"]) {
-  const s = severity(day);
-  console.log(`  ${day}  score=${String(s.score).padStart(5)}  count=${s.count}  -> ${levelFor(s.score)[2]}`);
-}
+/* ---------- 完成后放晴 ---------- */
+const doneAll = new Set(['e05', 'e06', 'e07', 'e08', 'e09']);
+const after = E.weatherOn('2026-11-13', events, doneAll);
+console.log(`\n[勾掉 11/13 的 5 件后] ${w13.score} → ${after.score}  (${after.level.label})`);
+ok('勾掉后当天明显好转', after.score < w13.score * 0.5);
 
-console.log("\n--- 下一场风暴（从 11/13 起） ---");
-for (let i = 1; i <= 30; i++) {
-  const k = shift("2026-11-13", i);
-  const s = severity(k);
-  if (s.count > 0 && s.score >= 7) {
-    console.log(`  ${k}  ${levelFor(s.score)[2]}  ${s.count} 个事项  还有 ${i} 天`);
-    break;
-  }
+/* ---------- 曲线 ---------- */
+console.log('\n[类型曲线：同样是 3 天前]');
+const mk = (type, extra) => Object.assign({ id: 'x', type, due: '2026-11-20T23:59:00+08:00' }, extra || {});
+const pairs = [
+  ['lab', mk('lab', { weight: 3 })],
+  ['exam', mk('exam', { weight: 3, leadDays: 10 })],
+  ['quiz', mk('quiz', { weight: 3, leadDays: 5 })],
+  ['per', mk('per', { weight: 3, leadDays: 5 })],
+];
+for (const [name, e] of pairs) {
+  const c = E.contribution('2026-11-17', e);
+  console.log(`  ${name.padEnd(5)} 权重 3 → ${c.toFixed(2)}`);
 }
+ok('考试比实验更早产生压力', E.contribution('2026-11-17', pairs[1][1]) > E.contribution('2026-11-17', pairs[0][1]));
+ok('陡升曲线在窗口初期更轻', E.contribution('2026-11-16', pairs[2][1]) < E.contribution('2026-11-17', pairs[2][1]) + 0.001);
+ok('窗口外为 0', E.contribution('2026-11-01', mk('lab')) === 0);
+ok('截止当天最重', E.contribution('2026-11-20', mk('lab', { weight: 2 })) === 2 * 1.3);
+
+/* ---------- 主次排序 ---------- */
+console.log('\n[今天(11/13)该动什么]');
+const P = E.priorities('2026-11-13', events, done);
+P.slice(0, 4).forEach((p, i) => {
+  console.log(`  ${i + 1}. ${p.title}  ${p.daysLeft} 天后  晚了 ${p.lateBy} 天`);
+});
+ok('排序只含未来事项', P.every((p) => p.daysLeft >= 0));
+ok('晚了更多的排在前面或同期', P[0].lateBy >= P[P.length - 1].lateBy || P[0].daysLeft <= P[P.length - 1].daysLeft);
+
+/* ---------- 下一场风暴 ---------- */
+const storm = E.nextStorm('2026-11-13', events, done);
+console.log(`\n[下一场风暴] ${storm ? storm.key + ' ' + storm.level.label + ' · ' + storm.inDays + ' 天后' : '无'}`);
+ok('能找出下一场风暴', !!storm);
+
+/* ---------- 远期模糊 ---------- */
+console.log('\n[远期模糊]');
+ok('14 天内精确', E.confidenceFor('2026-11-27', '2026-11-13') === 'precise');
+ok('15 天后模糊', E.confidenceFor('2026-11-28', '2026-11-13') === 'fuzzy');
+
+console.log(fail === 0 ? '\n全部通过 ✅' : `\n${fail} 项失败 ❌`);
+process.exit(fail === 0 ? 0 : 1);
