@@ -18,6 +18,9 @@
   <div class="rain" id="rain" aria-hidden="true"></div>
   <div class="flash" id="flash" aria-hidden="true"></div>
 
+  <!-- 气泡层：贴在 3D 锚点上，点一下跳进面板 -->
+  <div class="bubbles" id="bubbles"></div>
+
   <!-- 城市态：浮在城市上方的极简信息条 -->
   <div class="city-hud" id="cityHud">
     <div class="city-hud-top">
@@ -58,7 +61,7 @@
       </div>
     </header>
 
-    <section class="hero">
+    <section class="hero" id="sectionToday">
       <div class="hero-icon" id="heroIcon">⛈️</div>
       <h1 class="hero-title" id="heroTitle">雷暴</h1>
       <p class="hero-sub" id="heroSub">今天有 0 个事项到期</p>
@@ -80,7 +83,7 @@
       </div>
     </section>
 
-    <section class="focus">
+    <section class="focus" id="sectionFocus">
       <div class="section-label">现在做这一件</div>
       <article class="focus-card" id="focusCard"></article>
     </section>
@@ -96,10 +99,46 @@
       <div class="timeline-hint">越远越模糊 —— 远期预报本来就不准</div>
     </section>
 
-    <section class="manage">
+    <section class="activities" id="sectionActivities">
+      <div class="section-label">最近的活动</div>
+      <div class="activity-list" id="activityList"></div>
+      <button class="btn add-btn" id="addActivityBtn" type="button">+ 新增活动</button>
+
+      <form class="event-form" id="activityForm" hidden>
+        <label class="field">
+          <span>活动名称</span>
+          <input name="title" type="text" required maxlength="40" placeholder="例如 CCL 讲座" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>日期</span>
+          <input name="date" type="date" required>
+        </label>
+        <label class="field">
+          <span>时间（可选）</span>
+          <input name="time" type="time">
+        </label>
+        <label class="field">
+          <span>地点（可选）</span>
+          <input name="place" type="text" maxlength="40" placeholder="例如 AAB 学术大楼" autocomplete="off">
+        </label>
+        <div class="form-actions">
+          <button class="btn primary" type="submit">加入活动</button>
+          <button class="btn" type="button" id="cancelActivity">取消</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="manage" id="sectionManage">
       <div class="section-label">事项管理</div>
       <div class="event-list" id="eventList"></div>
-      <button class="btn add-btn" id="addEventBtn" type="button">+ 新增事项</button>
+
+      <div class="manage-actions">
+        <button class="btn add-btn" id="addEventBtn" type="button">+ 新增事项</button>
+        <button class="btn add-btn" id="importBtn" type="button">导入日历 .ics</button>
+        <input type="file" id="importFile" accept=".ics,text/calendar" hidden>
+      </div>
+
+      <div class="import-preview" id="importPreview" hidden></div>
 
       <form class="event-form" id="eventForm" hidden>
         <label class="field">
@@ -145,6 +184,7 @@
   <script src="scene3d.js"></script>
   <script src="engine.js"></script>
   <script src="store.js"></script>
+  <script src="importer.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -38,11 +38,23 @@
     { id: 'e16', course: 'C', title: 'Tutorial 提交箱',              due: '2026-11-27T23:59:00+08:00', type: 'custom', weight: 1, leadDays: 3 },
   ];
 
+  /* ---------------- 种子活动（demo，可删可改） ---------------- */
+
+  const SEED_ACTIVITIES = [
+    { id: 'a01', title: 'BUHACK 2.0 · 48 小时线上黑客松', date: '2026-11-13', time: '10:00',
+      place: '线上 · HKBU Coding Club', note: '我们自己也在里面', demo: true },
+    { id: 'a02', title: 'CCL 联课 · 业界分享会', date: '2026-11-18', time: '16:30',
+      place: 'AAB 学术大楼', note: '要签到，记 CCL 时数', demo: true },
+    { id: 'a03', title: '校园招聘日 Career Fair', date: '2026-11-24', time: '11:00',
+      place: '大学会堂', note: '记得带简历', demo: true },
+  ];
+
   const DEFAULTS = {
     events: null,      // null = 用种子数据
     done: [],          // 已完成的事项 id
     checks: {},        // { eventId: [bool, ...] } 准备清单勾选
     city: 'hongkong',  // 当前城市
+    activities: null,  // null = 用种子数据（线下活动，不影响天气）
   };
 
   let state = null;
@@ -73,6 +85,54 @@
 
   function events() {
     return state.events && state.events.length ? state.events : clone(SEED_EVENTS);
+  }
+
+  /* ---------------- 线下活动（不影响天气，只决定港口有没有船） ---------------- */
+
+  function activities() {
+    return state.activities && state.activities.length ? state.activities : clone(SEED_ACTIVITIES);
+  }
+
+  function saveActivities(list) {
+    state.activities = list;
+    save();
+  }
+
+  function addActivity(payload) {
+    const list = activities().slice();
+    list.push({
+      id: 'act' + Date.now().toString(36),
+      title: payload.title || '未命名活动',
+      date: payload.date,
+      time: payload.time || '',
+      place: payload.place || '',
+      note: payload.note || '',
+      demo: false,
+    });
+    saveActivities(list);
+  }
+
+  function removeActivity(id) {
+    saveActivities(activities().filter((a) => a.id !== id));
+  }
+
+  /**
+   * 船只状态：活动前 3 天进港，当天停在码头，结束后离港。
+   * returning { phase: 'away' | 'incoming' | 'docked' | 'leaving', activity, inDays }
+   */
+  function portState(today) {
+    const list = activities().slice().sort((a, b) => a.date.localeCompare(b.date));
+    const upcoming = list.filter((a) => a.date >= today);
+    if (!upcoming.length) return { phase: 'away', activity: null, inDays: null };
+
+    const next = upcoming[0];
+    const inDays = Math.round(
+      (new Date(next.date + 'T12:00:00') - new Date(today + 'T12:00:00')) / 86400000,
+    );
+
+    if (inDays === 0) return { phase: 'docked', activity: next, inDays: 0 };
+    if (inDays <= 3) return { phase: 'incoming', activity: next, inDays };
+    return { phase: 'away', activity: next, inDays };
   }
 
   function doneIds() { return new Set(state.done); }
@@ -146,10 +206,14 @@
   function city() { return state.city; }
   function setCity(id) { state.city = id; save(); }
 
+  // 模块加载时先读一次，保证任何入口调用都有 state（浏览器/Node 通用）
+  load();
+
   return {
-    KEY, SEED_EVENTS, DEFAULTS,
+    KEY, SEED_EVENTS, SEED_ACTIVITIES, DEFAULTS,
     load, save, reset,
     events, saveEvents, addEvent, updateEvent, removeEvent,
+    activities, saveActivities, addActivity, removeActivity, portState,
     doneIds, markDone, undoDone, isDone,
     checksOf, setChecks, progressOf,
     city, setCity,

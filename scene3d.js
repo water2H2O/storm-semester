@@ -182,7 +182,55 @@
     const p = PRESETS[key] || PRESETS.cloudy;
     target = p;
     flashChance = p.flash;
+    lastWeatherKey = key;
+    if (cityMeta && cityMeta.setSignal) cityMeta.setSignal(key);
   }
+
+  let lastWeatherKey = 'storm';
+
+  /* ---------------- 港口：船 ---------------- */
+  let portState = { phase: 'away', inDays: null };
+
+  function setPort(state) {
+    portState = state || { phase: 'away', inDays: null };
+  }
+
+  /* ---------------- 气泡（HTML 叠在 3D 上） ---------------- */
+  let bubbleItems = [];
+  const bubbleLayer = document.getElementById('bubbles');
+
+  /**
+   * 气泡：贴在城市的某个锚点上，点一下就跳进面板对应区块。
+   * list: [{ id, anchorKey, icon, title, sub, target }]
+   */
+  function setBubbles(list) {
+    if (!bubbleLayer) return;
+    bubbleLayer.innerHTML = '';
+    bubbleItems = (list || []).map((b) => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'bubble bubble-' + b.id;
+      el.innerHTML = `<span class="bubble-icon">${b.icon}</span>
+        <span class="bubble-text"><b>${b.title}</b><i>${b.sub}</i></span>`;
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (b.target && window.STORM_APP) window.STORM_APP.jumpTo(b.target);
+      });
+      bubbleLayer.appendChild(el);
+      return { el, anchorKey: b.anchorKey };
+    });
+  }
+
+  function anchorOf(key) {
+    if (key === 'ship') {
+      const port = cityMeta.port;
+      if (!port) return null;
+      return port.group.position.clone().add(new THREE.Vector3(0, 3.4, 0));
+    }
+    const a = cityMeta.anchors && cityMeta.anchors[key];
+    return a ? new THREE.Vector3(a[0], a[1], a[2]) : null;
+  }
+
 
   /* ---------------- 压力 → 窗户亮灯 ---------------- */
   let windowHeat = 0;      // 目标值 0..1
@@ -253,6 +301,7 @@
   let cityWindowMats = [];
   let cityMats = [];
   let currentCityId = null;
+  let cityMeta = {};
 
   function disposeCity() {
     if (!cityGroup) return;
@@ -355,6 +404,8 @@
     camElevWanted = cam.elev || 0.32;
 
     currentCityId = def.id;
+    cityMeta = meta;
+    if (meta.setSignal) meta.setSignal(lastWeatherKey);
     return def.id;
   }
 
@@ -373,6 +424,8 @@
     setPressure,
     setMode,
     setCity,
+    setPort,
+    setBubbles,
     buildCity,
     registerCity(def) {
       byId.set(def.id, def);
@@ -472,6 +525,40 @@
       Math.cos(angle) * Math.cos(elev) * dist,
     );
     camera.lookAt(camTarget.x, camTarget.y, camTarget.z);
+
+    // 船：靠岸 / 在外海等待 / 离港
+    const port = cityMeta.port;
+    if (port && port.group) {
+      const docked = portState.phase === 'docked';
+      const dest = new THREE.Vector3(...(docked || portState.phase === 'leaving' ? port.dockPos : port.waitPos));
+      port.group.position.lerp(dest, 1 - Math.pow(0.15, dt));
+      port.group.visible = portState.phase !== 'away';
+      if (port.group.visible) {
+        const dx = port.dockPos[0] - port.group.position.x;
+        const dz = port.dockPos[2] - port.group.position.z;
+        if (Math.abs(dx) + Math.abs(dz) > 0.15) {
+          port.group.rotation.y = Math.atan2(dx, dz);
+        }
+      }
+    }
+
+    // 气泡跟着锚点走
+    if (bubbleItems.length) {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const inCity = mode === 'city';
+      bubbleItems.forEach((b) => {
+        const wp = anchorOf(b.anchorKey);
+        if (!wp) { b.el.style.opacity = '0'; return; }
+        const v = wp.project(camera);
+        const sx = (v.x * 0.5 + 0.5) * vw;
+        const sy = (-v.y * 0.5 + 0.5) * vh;
+        const on = inCity && v.z < 1;
+        b.el.style.transform = `translate(-50%, -100%) translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px)`;
+        b.el.style.opacity = on ? '1' : '0';
+        b.el.style.pointerEvents = on ? 'auto' : 'none';
+      });
+    }
 
     renderer.render(scene, camera);
     requestAnimationFrame(frame);

@@ -15,14 +15,17 @@
   /* ---------------- 状态 ---------------- */
   let events = [];
   let doneIds = new Set();
+  let activities = [];
   let returnTimer = null;
   let pendingReturn = false;
+  let importQueue = [];
 
   const todayKey = () => DEMO_TODAY || E.todayKey();
 
   function refresh() {
     events = S.events();
     doneIds = S.doneIds();
+    activities = S.activities();
   }
 
   /* ============================================================
@@ -106,6 +109,7 @@
       scene.setWeather(w.level.key);
       scene.setPressure(w.score);
     }
+    syncBubbles();
   }
 
   /* ---------------- 焦点卡 ---------------- */
@@ -200,6 +204,43 @@
     $('eventList').innerHTML = html;
   }
 
+  /* ---------------- 线下活动（船） ---------------- */
+  function renderActivities() {
+    const today = todayKey();
+    const list = activities.slice().sort((a, b) => a.date.localeCompare(b.date));
+    const upcoming = list.filter((a) => a.date >= today);
+    const past = list.filter((a) => a.date < today);
+
+    const rowOf = (a) => {
+      const days = E.daysBetween(today, a.date);
+      const when = days === 0 ? '今天' : days > 0 ? `${days} 天后` : `${-days} 天前`;
+      return `<div class="act${a.date < today ? ' past' : ''}" data-act="${a.id}">
+        <div class="act-date">
+          <b>${E.mdOf(a.date).split('/')[1]}</b>
+          <span>${E.mdOf(a.date).split('/')[0]}月</span>
+        </div>
+        <div class="act-body">
+          <div class="act-title">${escapeHtml(a.title)}</div>
+          <div class="act-meta">${when}${a.time ? ' · ' + a.time : ''}${a.place ? ' · ' + escapeHtml(a.place) : ''}</div>
+          ${a.note ? `<div class="act-note">${escapeHtml(a.note)}</div>` : ''}
+        </div>
+        <button class="ev-del" data-del-act="${a.id}" title="删除">×</button>
+      </div>`;
+    };
+
+    let html = upcoming.map(rowOf).join('');
+    if (!upcoming.length) {
+      html = `<div class="ev-empty">近期没有活动。加一个，港口就会有船来。</div>`;
+    }
+    if (past.length) {
+      html += `<details class="ev-archive">
+        <summary>已经结束 ${past.length} 个</summary>
+        <div class="ev-archive-body">${past.map(rowOf).join('')}</div>
+      </details>`;
+    }
+    $('activityList').innerHTML = html;
+  }
+
   /* ---------------- 城市切换 ---------------- */
   function renderCitySwitch() {
     const scene = window.STORM_SCENE;
@@ -225,7 +266,74 @@
   function renderAll() {
     renderWeather();
     renderEventList();
+    renderActivities();
     renderCitySwitch();
+    syncPort();
+    syncBubbles();
+  }
+
+  /** 把港口状态交给 3D 场景（船） */
+  function syncPort() {
+    const scene = window.STORM_SCENE;
+    if (!scene || !scene.setPort) return;
+    scene.setPort(S.portState(todayKey()));
+  }
+
+  /** 城市里的两个气泡：天文台（坏消息）和船（好消息） */
+  function syncBubbles() {
+    const scene = window.STORM_SCENE;
+    if (!scene || !scene.setBubbles) return;
+
+    const today = todayKey();
+    const w = E.weatherOn(today, events, doneIds);
+    const storm = E.nextStorm(today, events, doneIds);
+    const port = S.portState(today);
+
+    const list = [];
+
+    // 天文台：报忧
+    let warnSub;
+    if (w.count > 0) warnSub = `今天 ${w.count} 个事项到期 · 压力 ${w.score.toFixed(1)}`;
+    else if (storm) warnSub = `下一场在 ${storm.inDays} 天后 · 压力 ${storm.score.toFixed(1)}`;
+    else warnSub = '未来 30 天平静';
+
+    list.push({
+      id: 'obs',
+      anchorKey: 'observatory',
+      icon: w.level.icon,
+      title: `天文台 · ${w.level.label}`,
+      sub: warnSub,
+      target: w.count > 0 ? '#sectionToday' : '#nextSection',
+    });
+
+    // 港口：报喜
+    if (port.phase !== 'away' && port.activity) {
+      const inDays = port.inDays;
+      const when = inDays === 0 ? '今天' : `${inDays} 天后`;
+      list.push({
+        id: 'ship',
+        anchorKey: 'ship',
+        icon: '🚢',
+        title: escapeHtml(port.activity.title),
+        sub: `${when}${port.activity.place ? ' · ' + escapeHtml(port.activity.place) : ''}`,
+        target: '#sectionActivities',
+      });
+    }
+
+    scene.setBubbles(list);
+  }
+
+  /** 从 3D 气泡跳进面板并定位到对应区块 */
+  function jumpTo(selector) {
+    pendingReturn = false;
+    setMode('data');
+    const el = document.querySelector(selector);
+    if (!el) return;
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('jump-flash');
+      setTimeout(() => el.classList.remove('jump-flash'), 1800);
+    }, 520);
   }
 
   /* ============================================================
@@ -335,6 +443,15 @@
         return;
       }
 
+      const delAct = ev.target.closest('[data-del-act]');
+      if (delAct) {
+        S.removeActivity(delAct.getAttribute('data-del-act'));
+        refresh();
+        renderAll();
+        toast('已删除活动');
+        return;
+      }
+
       const city = ev.target.closest('[data-city]');
       if (city) { applyCity(city.getAttribute('data-city')); return; }
     });
@@ -393,6 +510,47 @@
     });
     $('cancelAdd').addEventListener('click', () => { form.hidden = true; });
 
+    /* --- 线下活动 --- */
+    const actForm = $('activityForm');
+    $('addActivityBtn').addEventListener('click', () => {
+      if (actForm.hidden) {
+        actForm.querySelector('[name="date"]').value = todayKey();
+        actForm.hidden = false;
+        actForm.querySelector('[name="title"]').focus();
+      } else {
+        actForm.hidden = true;
+      }
+    });
+    $('cancelActivity').addEventListener('click', () => { actForm.hidden = true; });
+    actForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(actForm);
+      if (!fd.get('date')) return;
+      S.addActivity({
+        title: String(fd.get('title') || '').trim(),
+        date: String(fd.get('date')),
+        time: String(fd.get('time') || ''),
+        place: String(fd.get('place') || ''),
+      });
+      actForm.reset();
+      actForm.hidden = true;
+      refresh();
+      renderAll();
+      toast('已加入活动 —— 港口会有船来');
+    });
+
+    /* --- 导入日历 --- */
+    $('importBtn').addEventListener('click', () => $('importFile').click());
+    $('importFile').addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => handleImported(String(reader.result || ''));
+      reader.onerror = () => toast('文件读取失败');
+      reader.readAsText(f, 'utf-8');
+    });
+
     $('eventType').addEventListener('change', () => {
       const preset = E.presetOf($('eventType').value);
       const wIn = form.querySelector('[name="weight"]');
@@ -428,6 +586,64 @@
       refresh();
       renderAll();
       toast('已加入学期');
+    });
+  }
+
+  /* ---------------- 导入日历 ---------------- */
+  function handleImported(text) {
+    const parsed = window.StormImport ? window.StormImport.parseICS(text) : [];
+    if (!parsed.length) {
+      toast('没解析到事件 —— 确认是 .ics 日历文件');
+      return;
+    }
+    importQueue = parsed;
+    renderImportPreview();
+  }
+
+  function renderImportPreview() {
+    const box = $('importPreview');
+    const types = Object.keys(E.TYPES);
+    box.innerHTML = `
+      <div class="ip-head">从日历里解析到 ${importQueue.length} 个事件，选要导入的</div>
+      <div class="ip-list">
+        ${importQueue.map((it, i) => `
+          <label class="ip-row">
+            <input type="checkbox" data-ip-check="${i}" checked>
+            <span class="ip-title">${escapeHtml(it.summary)}</span>
+            <span class="ip-due">${it.due.slice(5, 10).replace('-', '/')} ${it.due.slice(11, 16)}</span>
+            <select data-ip-type="${i}">
+              ${types.map((t) => `<option value="${t}"${t === it.type ? ' selected' : ''}>${E.TYPES[t].label}</option>`).join('')}
+            </select>
+          </label>`).join('')}
+      </div>
+      <div class="form-actions">
+        <button class="btn primary" type="button" id="importConfirm">导入选中</button>
+        <button class="btn" type="button" id="importCancel">取消</button>
+      </div>`;
+    box.hidden = false;
+
+    $('importCancel').addEventListener('click', () => {
+      box.hidden = true;
+      importQueue = [];
+    });
+
+    $('importConfirm').addEventListener('click', () => {
+      const picked = [];
+      box.querySelectorAll('[data-ip-check]').forEach((cb) => {
+        if (!cb.checked) return;
+        const i = Number(cb.getAttribute('data-ip-check'));
+        const sel = box.querySelector(`[data-ip-type="${i}"]`);
+        picked.push({ item: importQueue[i], type: sel ? sel.value : 'lab' });
+      });
+      if (!picked.length) { toast('没有选中任何事件'); return; }
+      picked.forEach((p) => {
+        S.addEvent({ title: p.item.summary, type: p.type, due: p.item.due }, E);
+      });
+      box.hidden = true;
+      importQueue = [];
+      refresh();
+      renderAll();
+      toast(`已导入 ${picked.length} 个事项`);
     });
   }
 
@@ -518,6 +734,16 @@
     renderAll();
 
     if (params.has('data')) setMode('data');
+
+    // 给 3D 场景用的入口：气泡点击 → 跳转到面板对应区块
+    window.STORM_APP = {
+      jumpTo,
+      setMode,
+      refresh,
+      renderAll,
+      port: () => S.portState(todayKey()),
+      today: todayKey,
+    };
 
     window.__storm = { E, S, refresh, renderAll, setMode, events: () => events };
   }
