@@ -103,6 +103,9 @@
       ? `下一场风暴：${storm.level.label} · ${E.dowOf(storm.key)} ${E.mdOf(storm.key)} · 还有 ${storm.inDays} 天`
       : '未来 30 天风平浪静';
 
+    /* --- 电视台角标 --- */
+    renderTxBadge(w.level);
+
     /* --- 驱动 3D 城市 --- */
     const scene = window.STORM_SCENE;
     if (scene) {
@@ -110,6 +113,33 @@
       scene.setPressure(w.score);
     }
     syncBubbles();
+  }
+
+  /* ---------------- 电视台角标 ---------------- */
+  // 香港天文台的警告信号：恶劣天气时挂在左上角，像电视台那样
+  const TX_SIGNALS = {
+    storm: { ball: '⚡', tone: 'storm', label: '雷暴警告', sub: '天文台发出 · 生效中' },
+    t3:    { ball: '3', tone: 't3',    label: '三号风球', sub: '强烈季候风信号 · 生效中' },
+    t8:    { ball: '8', tone: 't8',    label: '八号风球', sub: '烈风或暴风信号 · 生效中' },
+    black: { ball: '雨', tone: 'black', label: '黑色暴雨警告', sub: '天文台发出 · 生效中' },
+  };
+
+  function renderTxBadge(level) {
+    const el = $('txBadge');
+    if (!el) return;
+    const sig = TX_SIGNALS[level.key];
+    if (!sig) {
+      el.classList.remove('on');
+      return;
+    }
+    el.dataset.tone = sig.tone;
+    el.innerHTML = `
+      <span class="tx-ball">${sig.ball}</span>
+      <span class="tx-text">
+        <b>${sig.label}</b>
+        <i>${sig.sub}</i>
+      </span>`;
+    el.classList.add('on');
   }
 
   /* ---------------- 焦点卡 ---------------- */
