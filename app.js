@@ -237,6 +237,11 @@ function render() {
       </div>`);
   }
   $("timeline").innerHTML = tl.join("");
+
+  /* --- 驱动 3D 场景 --- */
+  if (window.STORM_SCENE && window.STORM_SCENE.setWeather) {
+    window.STORM_SCENE.setWeather(w.level.key);
+  }
 }
 
 function focusTemplate(p, today) {
