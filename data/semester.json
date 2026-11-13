@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "name": "2026 Fall Semester (anonymized)",
+    "timezone": "Asia/Hong_Kong",
+    "termStart": "2026-09-01",
+    "termEnd": "2026-12-15",
+    "source": "real LMS calendar + personal schedule, names anonymized",
+    "note": "19 events. Some are submittable (submit), some just happen to you (happen: exams, in-class interviews)."
+  },
+  "courses": [
+    { "id": "A", "name": "Course A", "color": "#4C6EF5" },
+    { "id": "B", "name": "Course B", "color": "#F59F00" },
+    { "id": "C", "name": "Course C", "color": "#12B886" },
+    { "id": "D", "name": "Course D", "color": "#E64980" },
+    { "id": "E", "name": "University EN2", "color": "#7950F2" }
+  ],
+  "events": [
+    {
+      "id": "e17", "course": "B", "title": "In-class interview (抽查)",
+      "due": "2026-11-10T10:00:00+08:00",
+      "type": "interview", "kind": "happen", "weight": 3, "leadDays": 3,
+      "checklist": ["过一遍 Lab 代码", "准备 2 个能讲清楚的点"]
+    },
+    {
+      "id": "e18", "course": "C", "title": "Midterm Exam",
+      "due": "2026-11-11T09:30:00+08:00",
+      "type": "exam", "kind": "happen", "weight": 4, "leadDays": 10,
+      "checklist": ["复习 Ch1-4", "做一份 past paper", "整理错题"]
+    },
+    {
+      "id": "e19", "course": "E", "title": "University EN2 Presentation",
+      "due": "2026-11-17T23:59:00+08:00",
+      "type": "presentation", "kind": "submit", "weight": 3, "leadDays": 5
+    },
+
+    { "id": "e01", "course": "A", "title": "Lab 5 Submission",               "due": "2026-11-01T23:59:00+08:00", "type": "lab",          "kind": "submit", "weight": 2, "leadDays": 7 },
+    { "id": "e02", "course": "B", "title": "Assignment 1",                    "due": "2026-11-06T23:59:00+08:00", "type": "assignment",   "kind": "submit", "weight": 3, "leadDays": 7 },
+    { "id": "e03", "course": "C", "title": "Programming Assignment",          "due": "2026-11-08T23:59:00+08:00", "type": "assignment",   "kind": "submit", "weight": 3, "leadDays": 7 },
+    { "id": "e04", "course": "A", "title": "Lab 6 Submission",               "due": "2026-11-08T23:59:00+08:00", "type": "lab",          "kind": "submit", "weight": 2, "leadDays": 7 },
+    { "id": "e05", "course": "D", "title": "Submission of Group Project",     "due": "2026-11-13T17:00:00+08:00", "type": "group-project","kind": "submit", "weight": 5, "leadDays": 7 },
+    { "id": "e06", "course": "D", "title": "Check similarity index",          "due": "2026-11-13T17:00:00+08:00", "type": "checkpoint",   "kind": "submit", "weight": 1, "leadDays": 3 },
+    { "id": "e07", "course": "D", "title": "Submission of Report file",       "due": "2026-11-13T17:00:00+08:00", "type": "report",       "kind": "submit", "weight": 4, "leadDays": 7 },
+    { "id": "e08", "course": "B", "title": "Submission of Individual Project","due": "2026-11-13T23:59:00+08:00", "type": "individual",   "kind": "submit", "weight": 4, "leadDays": 7 },
+    { "id": "e09", "course": "B", "title": "Submission Box (Individual)",     "due": "2026-11-13T23:59:00+08:00", "type": "checkpoint",   "kind": "submit", "weight": 1, "leadDays": 3 },
+    { "id": "e10", "course": "A", "title": "Lab 7 Submission",               "due": "2026-11-15T23:59:00+08:00", "type": "lab",          "kind": "submit", "weight": 2, "leadDays": 7 },
+    { "id": "e11", "course": "D", "title": "Late Submission of Report",       "due": "2026-11-20T17:00:00+08:00", "type": "report",       "kind": "submit", "weight": 3, "leadDays": 7 },
+    { "id": "e12", "course": "B", "title": "Submission Box (Individual)",     "due": "2026-11-20T23:59:00+08:00", "type": "checkpoint",   "kind": "submit", "weight": 1, "leadDays": 3 },
+    { "id": "e13", "course": "B", "title": "Submission Box (Individual)",     "due": "2026-11-20T23:59:00+08:00", "type": "checkpoint",   "kind": "submit", "weight": 1, "leadDays": 3 },
+    { "id": "e14", "course": "C", "title": "Submission Box (Individual)",     "due": "2026-11-20T23:59:00+08:00", "type": "checkpoint",   "kind": "submit", "weight": 1, "leadDays": 3 },
+    { "id": "e15", "course": "C", "title": "Submission of Tutorial",          "due": "2026-11-27T17:00:00+08:00", "type": "tutorial",     "kind": "submit", "weight": 2, "leadDays": 7 },
+    { "id": "e16", "course": "C", "title": "Submission Box (Tutorial)",       "due": "2026-11-27T23:59:00+08:00", "type": "checkpoint",   "kind": "submit", "weight": 1, "leadDays": 3 }
+  ]
+}
