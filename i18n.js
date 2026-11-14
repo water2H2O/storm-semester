@@ -138,7 +138,7 @@
     'lang.label': 'Language',
     'lang.en': 'EN',
     'lang.zhHant': '繁',
-    'lang.zhHans': '简',
+    'lang.zhHans': '簡',
 
     'type.lab': 'Lab / assignment',
     'type.per': 'Presentation',
@@ -282,7 +282,7 @@
     'lang.label': '語言',
     'lang.en': 'EN',
     'lang.zhHant': '繁',
-    'lang.zhHans': '简',
+    'lang.zhHans': '簡',
 
     'type.lab': '實驗 / 作業',
     'type.per': '匯報 / 演示',
