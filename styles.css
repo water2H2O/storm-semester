@@ -1,4 +1,4 @@
-/* ---------- base ---------- */
+﻿/* ---------- base ---------- */
 *,
 *::before,
 *::after { box-sizing: border-box; }
@@ -791,6 +791,48 @@ section { margin-bottom: 34px; }
   font-weight: 650;
 }
 
+/* ---- 语言切换（与城市切换同一套外观） ---- */
+
+.hud-switches {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lang-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.lang-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  padding: 5px 8px;
+  min-width: 26px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.lang-btn:hover { color: var(--ink); }
+
+.lang-btn.on {
+  background: rgba(255, 255, 255, 0.9);
+  color: #0d1017;
+  font-weight: 650;
+}
+
 /* ---- 事项管理 ---- */
 .manage { margin-bottom: 30px; }
 
@@ -1008,6 +1050,7 @@ section { margin-bottom: 34px; }
   .ev-slider input[type="range"] { width: 58px; }
   .city-switch { font-size: 10px; }
   .cs-btn { padding: 4px 9px; }
+  .lang-btn { padding: 4px 6px; min-width: 22px; }
 }
 
 /* ---- 事项：折叠区与空状态 ---- */

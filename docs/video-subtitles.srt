@@ -1,0 +1,109 @@
+1
+00:00:00,000 --> 00:00:05,000
+Five deadlines land on the same Friday.
+五个截止日，挤在同一个周五。
+
+2
+00:00:05,000 --> 00:00:09,000
+My calendar lists every date.
+日历会告诉我哪天到期。
+
+3
+00:00:09,000 --> 00:00:13,000
+It never tells me what to start today.
+却不会说今天该开始什么。
+
+4
+00:00:13,000 --> 00:00:17,000
+So I turned my semester into a weather forecast.
+所以我给学期做了一份天气预报。
+
+5
+00:00:17,000 --> 00:00:23,000
+Every unfinished deadline adds pressure to the days before it.
+每件未完成的事，都会给截止前的日子加压。
+
+6
+00:00:23,000 --> 00:00:31,000
+Clear skies, or a black rainstorm — the city shows how heavy this week is.
+晴天或黑色暴雨，城市显示这一周有多重。
+
+7
+00:00:31,000 --> 00:00:39,000
+Next storm: the first high-load day in thirty days.
+下一场风暴：未来三十天第一个会塌的日子。
+
+8
+00:00:39,000 --> 00:00:46,000
+One task, chosen by preparation window, not by deadline alone.
+一件事：按准备窗口排序，而不是只看截止日。
+
+9
+00:00:46,000 --> 00:00:53,000
+The whole semester at a glance.
+一屏看完整个学期。
+
+10
+00:00:53,000 --> 00:01:00,000
+The further out, the vaguer it gets — a forecast should admit that.
+越远越模糊，预报本来就该承认这一点。
+
+11
+00:01:00,000 --> 00:01:07,000
+An exam is not something I submit.
+考试没法提交。
+
+12
+00:01:07,000 --> 00:01:14,000
+So I track preparation instead, kept separate from the workload score.
+所以我记录准备度，单独计算，不假装勾掉就减负。
+
+13
+00:01:14,000 --> 00:01:21,000
+Every schedule is different.
+每个人的学期都不一样。
+
+14
+00:01:21,000 --> 00:01:28,000
+So weights and preparation windows are mine to adjust.
+权重和准备窗口都能自己调。
+
+15
+00:01:28,000 --> 00:01:35,000
+Now the part that actually matters: finishing the work.
+接下来才是重点：把事情做完。
+
+16
+00:01:35,000 --> 00:01:44,000
+Each completed deadline removes its pressure.
+每勾掉一件，它带来的负担就消失。
+
+17
+00:01:44,000 --> 00:01:54,000
+The city clears as I work through them.
+一件件做完，城市一点点放晴。
+
+18
+00:01:54,000 --> 00:02:00,000
+The forecast becomes feedback.
+预报变成了反馈。
+
+19
+00:02:00,000 --> 00:02:10,000
+Existing calendars import too — in the browser, no account.
+已有的日历也能导入，全部在浏览器里，不用注册。
+
+20
+00:02:10,000 --> 00:02:18,000
+A generic island, or Hong Kong with its warning signals.
+通用岛，或者带风球信号的香港。
+
+21
+00:02:18,000 --> 00:02:27,000
+This is a planning tool, not a diagnosis.
+这是规划工具，不是诊断。
+
+22
+00:02:27,000 --> 00:02:35,000
+See the storm early. Choose your next step.
+提前看见风暴，然后从一件事开始。

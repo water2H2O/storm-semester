@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    Storm Semester — 界面
    引擎在 engine.js，存储 store.js，3D 场景 scene3d.js
    ============================================================ */
@@ -8,6 +8,7 @@
   const E = window.StormEngine;
   const S = window.StormStore;
   const $ = (id) => document.getElementById(id);
+  const I18N = window.StormI18N;
 
   const params = new URLSearchParams(location.search);
   const DEMO_TODAY = params.get('today') || null;
@@ -40,15 +41,15 @@
     $('heroIcon').textContent = w.level.icon;
     $('heroTitle').textContent = w.level.label;
     $('heroDate').textContent = `${today} ${E.dowOf(today)}`;
-    $('heroScore').textContent = `压力 ${w.score.toFixed(1)}`;
+    $('heroScore').textContent = I18N.t('hero.score', { n: w.score.toFixed(1) });
 
     const storm = E.nextStorm(today, events, doneIds);
     if (w.count > 0) {
-      $('heroSub').textContent = `今天有 ${w.count} 个事项到期`;
+      $('heroSub').textContent = I18N.t('hero.dueToday', { n: w.count });
     } else if (storm) {
-      $('heroSub').textContent = `今天没有截止，但风暴在 ${storm.inDays} 天后`;
+      $('heroSub').textContent = I18N.t('hero.stormIn', { n: storm.inDays });
     } else {
-      $('heroSub').textContent = '今天没有截止，未来 30 天也没有';
+      $('heroSub').textContent = I18N.t('hero.calm');
     }
 
     /* --- 下一场风暴 --- */
@@ -56,7 +57,7 @@
       $('nextSection').style.display = '';
       $('nextIcon').textContent = storm.level.icon;
       $('nextTitle').textContent = `${storm.level.label} · ${E.dowOf(storm.key)} ${E.mdOf(storm.key)}`;
-      $('nextSub').textContent = `${storm.count} 个事项 · 还有 ${storm.inDays} 天`;
+      $('nextSub').textContent = I18N.t('next.sub', { n: storm.count, d: storm.inDays });
       $('nextBadge').textContent = storm.level.signal || '';
     } else {
       $('nextSection').style.display = 'none';
@@ -66,16 +67,16 @@
     const list = E.priorities(today, events, doneIds);
     $('focusCard').innerHTML = list.length
       ? focusTemplate(list[0], today)
-      : `<div class="focus-empty">这一轮没有剩下的事了。出去走走吧。</div>`;
+      : `<div class="focus-empty">${I18N.t('focus.empty')}</div>`;
 
     /* --- 本周 --- */
     $('weekStrip').innerHTML = E.weekOf(today)
       .map((k) => {
         const ww = E.weatherOn(k, events, doneIds);
         return `<div class="week-cell${k === today ? ' today' : ''}">
-          <div class="wc-dow">${E.dowOf(k).replace('周', '')}</div>
+          <div class="wc-dow">${I18N.dowShort(k)}</div>
           <div class="wc-icon">${ww.level.icon}</div>
-          <div class="wc-name">${ww.count > 0 ? ww.count + ' 件' : ww.level.label}</div>
+          <div class="wc-name">${ww.count > 0 ? I18N.t('count.items', { n: ww.count }) : ww.level.label}</div>
         </div>`;
       })
       .join('');
@@ -87,7 +88,7 @@
         const fuzzy = E.confidenceFor(k, today) === 'fuzzy';
         return `<div class="tl${i === 0 ? ' today' : ''}${fuzzy ? ' fuzzy' : ''}">
           ${ww.count > 0 ? `<span class="tl-count">${ww.count}</span>` : ''}
-          <div class="tl-dow">${i === 0 ? '今天' : E.dowOf(k).replace('周', '')}</div>
+          <div class="tl-dow">${i === 0 ? I18N.t('ui.today') : I18N.dowShort(k)}</div>
           <div class="tl-date">${E.mdOf(k)}</div>
           <div class="tl-icon">${ww.level.icon}</div>
           <div class="tl-name">${ww.level.label}</div>
@@ -98,10 +99,10 @@
     /* --- 城市悬浮条 --- */
     $('cityIcon').textContent = w.level.icon;
     $('cityTitle').textContent = w.level.label;
-    $('citySub').textContent = w.count > 0 ? `今天有 ${w.count} 个事项到期` : '今天没有截止';
+    $('citySub').textContent = w.count > 0 ? I18N.t('city.subDue', { n: w.count }) : I18N.t('city.subNone');
     $('cityNext').textContent = storm
-      ? `下一场风暴：${storm.level.label} · ${E.dowOf(storm.key)} ${E.mdOf(storm.key)} · 还有 ${storm.inDays} 天`
-      : '未来 30 天风平浪静';
+      ? I18N.t('city.next', { label: storm.level.label, dow: E.dowOf(storm.key), md: E.mdOf(storm.key), n: storm.inDays })
+      : I18N.t('city.nextCalm');
 
     /* --- 电视台角标 --- */
     renderTxBadge(w.level);
@@ -118,10 +119,10 @@
   /* ---------------- 电视台角标 ---------------- */
   // 香港天文台的警告信号：恶劣天气时挂在左上角，像电视台那样
   const TX_SIGNALS = {
-    storm: { ball: '⚡', tone: 'storm', label: '雷暴警告', sub: '天文台发出 · 生效中' },
-    t3:    { ball: '3', tone: 't3',    label: '三号风球', sub: '强烈季候风信号 · 生效中' },
-    t8:    { ball: '8', tone: 't8',    label: '八号风球', sub: '烈风或暴风信号 · 生效中' },
-    black: { ball: '雨', tone: 'black', label: '黑色暴雨警告', sub: '天文台发出 · 生效中' },
+    storm: { ball: '⚡', tone: 'storm', key: 'storm' },
+    t3:    { ball: '3', tone: 't3',    key: 't3' },
+    t8:    { ball: '8', tone: 't8',    key: 't8' },
+    black: { ball: I18N.t('tx.black.ball'), tone: 'black', key: 'black' },
   };
 
   function renderTxBadge(level) {
@@ -136,8 +137,8 @@
     el.innerHTML = `
       <span class="tx-ball">${sig.ball}</span>
       <span class="tx-text">
-        <b>${sig.label}</b>
-        <i>${sig.sub}</i>
+        <b>${I18N.t('tx.' + sig.key + '.label')}</b>
+        <i>${I18N.t('tx.' + sig.key + '.sub')}</i>
       </span>`;
     el.classList.add('on');
   }
@@ -145,11 +146,11 @@
   /* ---------------- 焦点卡 ---------------- */
   function focusTemplate(p, today) {
     const isHappen = p.kind === 'happen';
-    const kindLabel = isHappen ? '发生型' : '提交型';
-    const when = p.daysLeft === 0 ? '今天' : `${p.daysLeft} 天后`;
+    const kindLabel = I18N.t(isHappen ? 'focus.kind.happen' : 'focus.kind.submit');
+    const when = p.daysLeft === 0 ? I18N.t('focus.when.today') : I18N.t('focus.when.in', { n: p.daysLeft });
     const late = p.lateBy > 0
-      ? `<span class="late">· 已经晚了 ${p.lateBy} 天</span>`
-      : `· 可以 ${E.mdOf(p.startBy)} 再开始`;
+      ? `<span class="late">· ${I18N.t('focus.late', { n: p.lateBy })}</span>`
+      : `· ${I18N.t('focus.startBy', { date: E.mdOf(p.startBy) })}`;
 
     const typeLabel = E.presetOf(p.type).label;
     const checks = S.checksOf(p.id);
@@ -164,13 +165,13 @@
 
     const action = isHappen
       ? `<div class="progress"><i style="width:${progress}%"></i></div>
-         <div class="focus-meta" style="margin:0">准备度 ${progress}% · 它不需要你交东西，但需要你准备好</div>`
-      : `<button class="btn primary" data-done="${p.id}">标记完成</button>`;
+         <div class="focus-meta" style="margin:0">${I18N.t('focus.progressNote', { n: progress })}</div>`
+      : `<button class="btn primary" data-done="${p.id}">${I18N.t('focus.markDone')}</button>`;
 
     return `
       <div class="focus-head">
         <span class="tag ${p.kind}">${kindLabel}</span>
-        <span class="focus-meta" style="margin:0">${typeLabel} · 课程 ${p.course}</span>
+        <span class="focus-meta" style="margin:0">${typeLabel} · ${I18N.t('focus.course', { code: p.course })}</span>
       </div>
       <h2 class="focus-title">${escapeHtml(p.title)}</h2>
       <div class="focus-meta">${E.dowOf(p.dueKey)} ${E.mdOf(p.dueKey)} · ${when} ${late}</div>
@@ -199,20 +200,20 @@
           <span class="ev-due">${E.mdOf(dueKey)} ${E.dowOf(dueKey)}</span>
         </div>
         <div class="ev-ctrl">
-          <label class="ev-slider" title="压力权重：这件对你有多重">
-            <span>权重</span>
+          <label class="ev-slider" title="${I18N.t('ev.weightTip')}">
+            <span>${I18N.t('ev.weight')}</span>
             <input type="range" data-weight="${e.id}" min="1" max="6" step="0.5" value="${weight}">
             <output>${weight}</output>
           </label>
-          <label class="ev-slider" title="准备窗口：提前多久开始有压力">
-            <span>窗口</span>
+          <label class="ev-slider" title="${I18N.t('ev.windowTip')}">
+            <span>${I18N.t('ev.window')}</span>
             <input type="range" data-lead="${e.id}" min="1" max="21" step="1" value="${lead}">
-            <output>${lead}天</output>
+            <output>${lead}${I18N.t('ev.leadUnitShort')}</output>
           </label>
           ${isDone
-            ? `<button class="ev-btn" data-undo="${e.id}" title="恢复">↺ 恢复</button>`
-            : `<button class="ev-btn" data-done="${e.id}" title="标记完成">✓ 完成</button>`}
-          <button class="ev-del" data-del="${e.id}" title="删除">×</button>
+            ? `<button class="ev-btn" data-undo="${e.id}" title="${I18N.t('ev.undo')}">↺ ${I18N.t('ev.undo')}</button>`
+            : `<button class="ev-btn" data-done="${e.id}" title="${I18N.t('ev.done')}">✓ ${I18N.t('ev.done')}</button>`}
+          <button class="ev-del" data-del="${e.id}" title="${I18N.t('ev.delete')}">×</button>
         </div>
       </div>`;
     };
@@ -223,11 +224,11 @@
 
     let html = active.map(rowOf).join('');
     if (!active.length) {
-      html += `<div class="ev-empty">还没有待办事项。加一件，看看天气怎么变。</div>`;
+      html += `<div class="ev-empty">${I18N.t('ev.empty')}</div>`;
     }
     if (archived.length) {
       html += `<details class="ev-archive">
-        <summary>已完成 / 已过期 ${archived.length} 件</summary>
+        <summary>${I18N.t('ev.archive', { n: archived.length })}</summary>
         <div class="ev-archive-body">${archived.map(rowOf).join('')}</div>
       </details>`;
     }
@@ -243,7 +244,7 @@
 
     const rowOf = (a) => {
       const days = E.daysBetween(today, a.date);
-      const when = days === 0 ? '今天' : days > 0 ? `${days} 天后` : `${-days} 天前`;
+      const when = days === 0 ? I18N.t('focus.when.today') : days > 0 ? I18N.t('focus.when.in', { n: days }) : I18N.t('focus.when.ago', { n: -days });
       return `<div class="act${a.date < today ? ' past' : ''}" data-act="${a.id}">
         <div class="act-date">
           <b>${E.mdOf(a.date).split('/')[1]}</b>
@@ -254,17 +255,17 @@
           <div class="act-meta">${when}${a.time ? ' · ' + a.time : ''}${a.place ? ' · ' + escapeHtml(a.place) : ''}</div>
           ${a.note ? `<div class="act-note">${escapeHtml(a.note)}</div>` : ''}
         </div>
-        <button class="ev-del" data-del-act="${a.id}" title="删除">×</button>
+        <button class="ev-del" data-del-act="${a.id}" title="${I18N.t('ev.delete')}">×</button>
       </div>`;
     };
 
     let html = upcoming.map(rowOf).join('');
     if (!upcoming.length) {
-      html = `<div class="ev-empty">近期没有活动。加一个，港口就会有船来。</div>`;
+      html = `<div class="ev-empty">${I18N.t('act.empty')}</div>`;
     }
     if (past.length) {
       html += `<details class="ev-archive">
-        <summary>已经结束 ${past.length} 个</summary>
+        <summary>${I18N.t('act.archive', { n: past.length })}</summary>
         <div class="ev-archive-body">${past.map(rowOf).join('')}</div>
       </details>`;
     }
@@ -278,7 +279,7 @@
     const cities = scene.cities();
     const active = S.city();
     const html = cities
-      .map((c) => `<button class="cs-btn${c.id === active ? ' on' : ''}" data-city="${c.id}" type="button">${c.label}</button>`)
+      .map((c) => `<button class="cs-btn${c.id === active ? ' on' : ''}" data-city="${c.id}" type="button">${I18N.cityLabel(c.id, c.label)}</button>`)
       .join('');
     ['citySwitch', 'citySwitchHud'].forEach((id) => {
       const el = $(id);
@@ -323,15 +324,15 @@
 
     // 天文台：报忧
     let warnSub;
-    if (w.count > 0) warnSub = `今天 ${w.count} 个事项到期 · 压力 ${w.score.toFixed(1)}`;
-    else if (storm) warnSub = `下一场在 ${storm.inDays} 天后 · 压力 ${storm.score.toFixed(1)}`;
-    else warnSub = '未来 30 天平静';
+    if (w.count > 0) warnSub = I18N.t('bubble.dueToday', { n: w.count, score: w.score.toFixed(1) });
+    else if (storm) warnSub = I18N.t('bubble.next', { n: storm.inDays, score: storm.score.toFixed(1) });
+    else warnSub = I18N.t('bubble.calm');
 
     list.push({
       id: 'obs',
       anchorKey: 'observatory',
       icon: w.level.icon,
-      title: `天文台 · ${w.level.label}`,
+      title: I18N.t('bubble.obs', { label: w.level.label }),
       sub: warnSub,
       target: w.count > 0 ? '#sectionToday' : '#nextSection',
     });
@@ -339,7 +340,7 @@
     // 港口：报喜
     if (port.phase !== 'away' && port.activity) {
       const inDays = port.inDays;
-      const when = inDays === 0 ? '今天' : `${inDays} 天后`;
+      const when = inDays === 0 ? I18N.t('bubble.today') : I18N.t('bubble.in', { n: inDays });
       list.push({
         id: 'ship',
         anchorKey: 'ship',
@@ -432,8 +433,8 @@
     const wasInData = document.body.dataset.mode === 'data';
     renderAll();
 
-    toast(`「${ev.title}」完成 —— 云散了`, {
-      label: '撤销',
+    toast(I18N.t('toast.done', { title: ev.title }), {
+      label: I18N.t('toast.undo'),
       onClick: () => { S.undoDone(id); refresh(); renderAll(); },
     });
 
@@ -469,7 +470,7 @@
         S.removeEvent(id);
         refresh();
         renderAll();
-        toast(`已删除「${target ? target.title : id}」`);
+        toast(I18N.t('toast.deletedEvent', { title: target ? target.title : id }));
         return;
       }
 
@@ -478,7 +479,7 @@
         S.removeActivity(delAct.getAttribute('data-del-act'));
         refresh();
         renderAll();
-        toast('已删除活动');
+        toast(I18N.t('toast.deletedActivity'));
         return;
       }
 
@@ -505,7 +506,7 @@
         const val = Number(l.value);
         S.updateEvent(id, { leadDays: val });
         const out = l.parentElement.querySelector('output');
-        if (out) out.textContent = val + '天';
+        if (out) out.textContent = val + I18N.t('ev.leadUnitShort');
         refresh();
         renderWeather();
       }
@@ -528,7 +529,7 @@
         const bar = card.querySelector('.progress > i');
         if (bar) bar.style.width = pct + '%';
         const note = card.querySelector('.progress + .focus-meta');
-        if (note) note.textContent = `准备度 ${pct}% · 它不需要你交东西，但需要你准备好`;
+        if (note) note.textContent = I18N.t('focus.progressNote', { n: pct });
       }
     });
 
@@ -566,7 +567,7 @@
       actForm.hidden = true;
       refresh();
       renderAll();
-      toast('已加入活动 —— 港口会有船来');
+      toast(I18N.t('toast.activityAdded'));
     });
 
     /* --- 导入日历 --- */
@@ -577,7 +578,7 @@
       if (!f) return;
       const reader = new FileReader();
       reader.onload = () => handleImported(String(reader.result || ''));
-      reader.onerror = () => toast('文件读取失败');
+      reader.onerror = () => toast(I18N.t('toast.fileError'));
       reader.readAsText(f, 'utf-8');
     });
 
@@ -615,7 +616,7 @@
       form.hidden = true;
       refresh();
       renderAll();
-      toast('已加入学期');
+      toast(I18N.t('toast.eventAdded'));
     });
   }
 
@@ -623,7 +624,7 @@
   function handleImported(text) {
     const parsed = window.StormImport ? window.StormImport.parseICS(text) : [];
     if (!parsed.length) {
-      toast('没解析到事件 —— 确认是 .ics 日历文件');
+      toast(I18N.t('toast.noParse'));
       return;
     }
     importQueue = parsed;
@@ -634,7 +635,7 @@
     const box = $('importPreview');
     const types = Object.keys(E.TYPES);
     box.innerHTML = `
-      <div class="ip-head">从日历里解析到 ${importQueue.length} 个事件，选要导入的</div>
+      <div class="ip-head">${I18N.t('imp.head', { n: importQueue.length })}</div>
       <div class="ip-list">
         ${importQueue.map((it, i) => `
           <label class="ip-row">
@@ -647,8 +648,8 @@
           </label>`).join('')}
       </div>
       <div class="form-actions">
-        <button class="btn primary" type="button" id="importConfirm">导入选中</button>
-        <button class="btn" type="button" id="importCancel">取消</button>
+        <button class="btn primary" type="button" id="importConfirm">${I18N.t('imp.confirm')}</button>
+        <button class="btn" type="button" id="importCancel">${I18N.t('act.form.cancel')}</button>
       </div>`;
     box.hidden = false;
 
@@ -665,7 +666,7 @@
         const sel = box.querySelector(`[data-ip-type="${i}"]`);
         picked.push({ item: importQueue[i], type: sel ? sel.value : 'lab' });
       });
-      if (!picked.length) { toast('没有选中任何事件'); return; }
+      if (!picked.length) { toast(I18N.t('toast.noneSelected')); return; }
       picked.forEach((p) => {
         S.addEvent({ title: p.item.summary, type: p.type, due: p.item.due }, E);
       });
@@ -673,7 +674,7 @@
       importQueue = [];
       refresh();
       renderAll();
-      toast(`已导入 ${picked.length} 个事项`);
+      toast(I18N.t('toast.imported', { n: picked.length }));
     });
   }
 
@@ -748,6 +749,7 @@
      启动
      ============================================================ */
   function boot() {
+    I18N.init();
     if (params.has('reset')) S.reset();
     S.load();
     refresh();

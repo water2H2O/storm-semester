@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-Hans">
+<html lang="en" data-lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Storm Semester · 学期风暴</title>
-<meta name="description" content="把一学期的截止日期变成天气。你的学期也有天气预报。">
+<title>Storm Semester — your semester has a weather forecast</title>
+<meta name="description" content="Turn academic deadlines into a weather forecast. See the workload build up, and know what to start next.">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body data-weather="storm" data-mode="city">
@@ -31,20 +31,23 @@
         <span class="dot"></span>
         Storm Semester
       </div>
-      <div class="city-switch" id="citySwitchHud" role="group" aria-label="选择城市"></div>
+      <div class="hud-switches">
+        <div class="city-switch" id="citySwitchHud" role="group"></div>
+        <div class="lang-switch" id="langSwitchHud" role="group"></div>
+      </div>
     </div>
 
     <div class="city-hud-main">
       <div class="city-weather">
         <span class="city-icon" id="cityIcon">⛈️</span>
-        <span class="city-title" id="cityTitle">雷暴</span>
+        <span class="city-title" id="cityTitle">Thunderstorm</span>
       </div>
-      <div class="city-sub" id="citySub">今天有 0 个事项到期</div>
-      <div class="city-next" id="cityNext">下一场风暴：黑色暴雨 · 周五 11/13 · 还有 4 天</div>
+      <div class="city-sub" id="citySub">0 events due today</div>
+      <div class="city-next" id="cityNext">Next storm: Black rainstorm · Fri 11/13 · in 4 days</div>
     </div>
 
     <button class="city-enter" id="cityEnter" type="button">
-      查看学期详情
+      <span data-i18n="city.enter">View semester details</span>
       <span class="city-enter-arrow">↑</span>
     </button>
   </div>
@@ -59,18 +62,19 @@
         Storm Semester
       </div>
       <div class="top-actions">
-        <div class="city-switch" id="citySwitch" role="group" aria-label="选择城市"></div>
-        <button class="theme-tag city-back" id="cityBack" type="button">← 回到城市</button>
+        <div class="city-switch" id="citySwitch" role="group"></div>
+        <div class="lang-switch" id="langSwitch" role="group"></div>
+        <button class="theme-tag city-back" id="cityBack" type="button" data-i18n="nav.back">← Back to city</button>
       </div>
     </header>
 
     <section class="hero" id="sectionToday">
       <div class="hero-icon" id="heroIcon">⛈️</div>
-      <h1 class="hero-title" id="heroTitle">雷暴</h1>
-      <p class="hero-sub" id="heroSub">今天有 0 个事项到期</p>
+      <h1 class="hero-title" id="heroTitle">Thunderstorm</h1>
+      <p class="hero-sub" id="heroSub">0 events due today</p>
       <div class="hero-meta">
-        <span class="pill" id="heroDate">2026-11-13 周五</span>
-        <span class="pill" id="heroScore">压力 9.4</span>
+        <span class="pill" id="heroDate">2026-11-13 Fri</span>
+        <span class="pill" id="heroScore">Workload 9.4</span>
       </div>
     </section>
 
@@ -78,66 +82,66 @@
       <div class="next-inner">
         <div class="next-icon" id="nextIcon">🌑</div>
         <div class="next-body">
-          <div class="next-label">下一场风暴</div>
-          <div class="next-title" id="nextTitle">黑色暴雨 · 周五 11/13</div>
-          <div class="next-sub" id="nextSub">5 个事项 · 还有 4 天</div>
+          <div class="next-label" data-i18n="next.label">Next storm</div>
+          <div class="next-title" id="nextTitle">Black rainstorm · Fri 11/13</div>
+          <div class="next-sub" id="nextSub">5 events · in 4 days</div>
         </div>
         <div class="next-badge" id="nextBadge">T8</div>
       </div>
     </section>
 
     <section class="focus" id="sectionFocus">
-      <div class="section-label">现在做这一件</div>
+      <div class="section-label" data-i18n="focus.label">Do this next</div>
       <article class="focus-card" id="focusCard"></article>
     </section>
 
     <section class="week">
-      <div class="section-label">本周</div>
+      <div class="section-label" data-i18n="week.label">This week</div>
       <div class="week-strip" id="weekStrip"></div>
     </section>
 
     <section class="timeline">
-      <div class="section-label">未来三周</div>
+      <div class="section-label" data-i18n="timeline.label">Next three weeks</div>
       <div class="timeline-scroll" id="timeline"></div>
-      <div class="timeline-hint">越远越模糊 —— 远期预报本来就不准</div>
+      <div class="timeline-hint" data-i18n="timeline.hint">Estimated from the events you entered. Dates past 14 days are dimmed as a distant-forecast cue, not a confidence interval.</div>
     </section>
 
     <section class="activities" id="sectionActivities">
-      <div class="section-label">最近的活动</div>
+      <div class="section-label" data-i18n="act.label">Upcoming activities</div>
       <div class="activity-list" id="activityList"></div>
-      <button class="btn add-btn" id="addActivityBtn" type="button">+ 新增活动</button>
+      <button class="btn add-btn" id="addActivityBtn" type="button" data-i18n="act.add">+ Add activity</button>
 
       <form class="event-form" id="activityForm" hidden>
         <label class="field">
-          <span>活动名称</span>
-          <input name="title" type="text" required maxlength="40" placeholder="例如 CCL 讲座" autocomplete="off">
+          <span data-i18n="act.form.title">Activity name</span>
+          <input name="title" type="text" required maxlength="40" data-i18n-ph="act.form.titlePh" placeholder="e.g. CCL lecture" autocomplete="off">
         </label>
         <label class="field">
-          <span>日期</span>
+          <span data-i18n="act.form.date">Date</span>
           <input name="date" type="date" required>
         </label>
         <label class="field">
-          <span>时间（可选）</span>
+          <span data-i18n="act.form.time">Time (optional)</span>
           <input name="time" type="time">
         </label>
         <label class="field">
-          <span>地点（可选）</span>
-          <input name="place" type="text" maxlength="40" placeholder="例如 AAB 学术大楼" autocomplete="off">
+          <span data-i18n="act.form.place">Place (optional)</span>
+          <input name="place" type="text" maxlength="40" data-i18n-ph="act.form.placePh" placeholder="e.g. AAB Academic Building" autocomplete="off">
         </label>
         <div class="form-actions">
-          <button class="btn primary" type="submit">加入活动</button>
-          <button class="btn" type="button" id="cancelActivity">取消</button>
+          <button class="btn primary" type="submit" data-i18n="act.form.submit">Add activity</button>
+          <button class="btn" type="button" id="cancelActivity" data-i18n="act.form.cancel">Cancel</button>
         </div>
       </form>
     </section>
 
     <section class="manage" id="sectionManage">
-      <div class="section-label">事项管理</div>
+      <div class="section-label" data-i18n="manage.label">Events</div>
       <div class="event-list" id="eventList"></div>
 
       <div class="manage-actions">
-        <button class="btn add-btn" id="addEventBtn" type="button">+ 新增事项</button>
-        <button class="btn add-btn" id="importBtn" type="button">导入日历 .ics</button>
+        <button class="btn add-btn" id="addEventBtn" type="button" data-i18n="manage.add">+ Add event</button>
+        <button class="btn add-btn" id="importBtn" type="button" data-i18n="manage.import">Import .ics calendar</button>
         <input type="file" id="importFile" accept=".ics,text/calendar" hidden>
       </div>
 
@@ -145,35 +149,35 @@
 
       <form class="event-form" id="eventForm" hidden>
         <label class="field">
-          <span>名称</span>
-          <input name="title" type="text" required maxlength="40" placeholder="例如 小组项目提交" autocomplete="off">
+          <span data-i18n="ev.form.title">Name</span>
+          <input name="title" type="text" required maxlength="40" data-i18n-ph="ev.form.titlePh" placeholder="e.g. Group project submission" autocomplete="off">
         </label>
         <label class="field">
-          <span>类型</span>
+          <span data-i18n="ev.form.type">Type</span>
           <select name="type" id="eventType"></select>
         </label>
         <label class="field">
-          <span>截止 / 发生时间</span>
+          <span data-i18n="ev.form.due">Due / event time</span>
           <input name="due" type="datetime-local" required>
         </label>
         <label class="field">
-          <span>压力权重 <output id="weightOut">3</output></span>
+          <span><span data-i18n="ev.form.weight">Weight</span> <output id="weightOut">3</output></span>
           <input name="weight" type="range" min="1" max="6" step="0.5" value="3">
         </label>
         <label class="field">
-          <span>准备窗口 <output id="leadOut">7</output> 天</span>
+          <span><span data-i18n="ev.form.lead">Prep window</span> <output id="leadOut">7</output> <span data-i18n="ev.form.leadUnit">days</span></span>
           <input name="leadDays" type="range" min="1" max="21" step="1" value="7">
         </label>
         <div class="form-actions">
-          <button class="btn primary" type="submit">加入学期</button>
-          <button class="btn" type="button" id="cancelAdd">取消</button>
+          <button class="btn primary" type="submit" data-i18n="ev.form.submit">Add to semester</button>
+          <button class="btn" type="button" id="cancelAdd" data-i18n="ev.form.cancel">Cancel</button>
         </div>
       </form>
     </section>
 
     <footer class="foot">
-      <span>天气不归你管，伞归你管。</span>
-      <span class="foot-dim">BUHACK 2.0 · HKBU Coding Club</span>
+      <span data-i18n="footer.tagline">Not a diagnosis, not an official weather warning. Prepare early, one thing at a time.</span>
+      <span class="foot-dim" data-i18n="footer.event">BUHACK 2.0 · HKBU Coding Club</span>
     </footer>
   </main>
 
@@ -188,6 +192,7 @@
   <script src="engine.js"></script>
   <script src="store.js"></script>
   <script src="importer.js"></script>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    Storm Semester — 压力引擎（纯逻辑，无 DOM）
    浏览器里挂到 window.StormEngine；Node 里可 require 做测试。
    ============================================================ */
@@ -39,14 +39,15 @@
     { key: 'clear',    min: 0,    label: '晴',       icon: '☀️' },
     { key: 'cloudy',   min: 0.01, label: '多云',     icon: '⛅' },
     { key: 'overcast', min: 2,    label: '阴',       icon: '☁️' },
-    { key: 'rain',     min: 4,    label: '小雨',     icon: '🌧️' },
+    { key: 'rain',     min: 4,    label: '小雨',     icon: '🌦️' },
     { key: 'storm',    min: 7,    label: '雷暴',     icon: '⛈️' },
     { key: 't3',       min: 10,   label: '三号风球', icon: '🌀', signal: 'T3' },
     { key: 't8',       min: 13,   label: '八号风球', icon: '🌪️', signal: 'T8' },
-    { key: 'black',    min: 18,   label: '黑色暴雨', icon: '🌑', signal: 'BLACK' },
+    { key: 'black',    min: 18,   label: '黑色暴雨', icon: '🌧️', signal: 'BLACK' },
   ];
 
-  const DOW = ['日', '一', '二', '三', '四', '五', '六'];
+  // 星期标签：默认简体中文，i18n 层可整体替换（见 setLabels）
+  let DOW = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
   /* ---------------- 日期 ---------------- */
 
@@ -67,7 +68,7 @@
   function daysBetween(a, b) {
     return Math.round((parseKey(b) - parseKey(a)) / 86400000);
   }
-  function dowOf(k) { return '周' + DOW[parseKey(k).getDay()]; }
+  function dowOf(k) { return DOW[parseKey(k).getDay()]; }
   function mdOf(k) {
     const d = parseKey(k);
     return `${d.getMonth() + 1}/${d.getDate()}`;
@@ -192,8 +193,24 @@
     return listDays(monday, 7);
   }
 
+  /* ---------------- 文案注入（i18n） ---------------- */
+
+  /**
+   * 替换引擎里的展示文案，游戏逻辑不依赖这些字符串。
+   * patch: { types:{lab:..}, levels:{clear:..}, curves:{steady:..}, dow:[7 个] }
+   */
+  function setLabels(patch) {
+    if (!patch) return;
+    if (patch.types) for (const k in patch.types) if (TYPES[k]) TYPES[k].label = patch.types[k];
+    if (patch.levels) LEVELS.forEach((l) => { if (patch.levels[l.key]) l.label = patch.levels[l.key]; });
+    if (patch.curves) for (const k in patch.curves) if (k in CURVE_LABELS) CURVE_LABELS[k] = patch.curves[k];
+    if (Array.isArray(patch.dow) && patch.dow.length === 7) DOW = patch.dow.slice();
+  }
+
   return {
-    TYPES, CURVES, CURVE_LABELS, LEVELS, DOW, FUZZY_AFTER,
+    TYPES, CURVES, CURVE_LABELS, LEVELS, FUZZY_AFTER,
+    get DOW() { return DOW; },
+    setLabels,
     presetOf, kindOf, leadOf, weightOf, curveOf,
     contribution, severity, levelFor, weatherOn,
     nextStorm, priorities, confidenceFor,

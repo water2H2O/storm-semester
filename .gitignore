@@ -9,3 +9,5 @@ build/
 Thumbs.db
 *.png.bak
 /PRD.md
+
+/demo/*.mp4

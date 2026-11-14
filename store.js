@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    Storm Semester — 本地存储
    事项、完成状态、准备清单、城市选择全部存在 localStorage。
    ============================================================ */
@@ -48,6 +48,93 @@
     { id: 'a03', title: '校园招聘日 Career Fair', date: '2026-11-24', time: '11:00',
       place: '大学会堂', note: '记得带简历', demo: true },
   ];
+
+  /* ---------------- 英文文案（种子数据是演示数据，跟随界面语言） ---------------- */
+
+  const EN_TITLES = {
+    e17: 'In-class interview', e18: 'Midterm Exam', e19: 'University EN2 Presentation',
+    e01: 'Lab 5', e02: 'Assignment 1', e03: 'Programming Assignment', e04: 'Lab 6',
+    e05: 'Group Project submission', e06: 'Similarity Index check', e07: 'Report file',
+    e08: 'Individual Project', e09: 'Submission Box', e10: 'Lab 7', e11: 'Late Report',
+    e12: 'Submission Box', e13: 'Submission Box', e14: 'Submission Box',
+    e15: 'Tutorial submission', e16: 'Tutorial submission box',
+  };
+
+  const EN_CHECKS = {
+    e17: ['Skim the lab code', 'Prepare two points you can explain clearly'],
+    e18: ['Review Ch1–4', 'Do one past paper', 'Go over the mistakes'],
+  };
+
+  const EN_ACTIVITIES = {
+    a01: { title: 'BUHACK 2.0 · 48-hour online hackathon', place: 'Online · HKBU Coding Club', note: "We're taking part too" },
+    a02: { title: 'CCL lecture · industry sharing', place: 'AAB Academic Building', note: 'Attendance is taken — counts toward CCL hours' },
+    a03: { title: 'Career Fair', place: 'University Hall', note: 'Bring your CV' },
+  };
+
+  /* 繁體中文种子文案 */
+  const HANT_TITLES = {
+    e17: '課上抽查 In-class interview', e18: '期中考試 Midterm Exam', e19: 'University EN2 匯報',
+    e01: 'Lab 5', e02: 'Assignment 1', e03: 'Programming Assignment', e04: 'Lab 6',
+    e05: '小組項目提交 Group Project', e06: '相似度檢查 Similarity Index', e07: '報告提交 Report file',
+    e08: '個人項目 Individual Project', e09: '提交箱 Submission Box', e10: 'Lab 7', e11: '遲交報告 Late Report',
+    e12: '提交箱 Submission Box', e13: '提交箱 Submission Box', e14: '提交箱 Submission Box',
+    e15: 'Tutorial 提交', e16: 'Tutorial 提交箱',
+  };
+
+  const HANT_CHECKS = {
+    e17: ['過一遍 Lab 程式碼', '準備 2 個能講清楚的點'],
+    e18: ['複習 Ch1–4', '做一份 past paper', '整理錯題'],
+  };
+
+  const HANT_ACTIVITIES = {
+    a01: { title: 'BUHACK 2.0 · 48 小時線上黑客松', place: '線上 · HKBU Coding Club', note: '我們自己也在裡面' },
+    a02: { title: 'CCL 聯課 · 業界分享會', place: 'AAB 學術大樓', note: '要簽到，記 CCL 時數' },
+    a03: { title: '校園招聘日 Career Fair', place: '大學會堂', note: '記得帶簡歷' },
+  };
+
+  const BASE_EVENTS = clone(SEED_EVENTS);
+  const BASE_ACTIVITIES = clone(SEED_ACTIVITIES);
+
+  /**
+   * 切换种子数据的展示语言。只改 title / checklist / 活动文案，
+   * 不动权重、准备窗口这些用户可能已经调过的字段。
+   */
+  function applyLocale(locale) {
+    const l = String(locale || 'en').toLowerCase();
+    const en = l.startsWith('en');
+    const hant = l === 'zh-hant' || l === 'zh-tw' || l === 'zh-hk' || l === 'zh-mo';
+
+    SEED_EVENTS.forEach((e, i) => {
+      const base = BASE_EVENTS[i];
+      const titles = en ? EN_TITLES : hant ? HANT_TITLES : null;
+      const checks = en ? EN_CHECKS : hant ? HANT_CHECKS : null;
+      e.title = (titles && titles[e.id]) || base.title;
+      if (base.checklist) {
+        e.checklist = (checks && checks[e.id]) ? checks[e.id].slice() : base.checklist.slice();
+      } else {
+        delete e.checklist;
+      }
+    });
+
+    SEED_ACTIVITIES.forEach((a, i) => {
+      const base = BASE_ACTIVITIES[i];
+      const map = en ? EN_ACTIVITIES : hant ? HANT_ACTIVITIES : null;
+      const pick = (map && map[a.id]) || base;
+      a.title = pick.title;
+      a.place = pick.place;
+      a.note = pick.note;
+    });
+  }
+
+  /** 供 store 内部取词，避免种子数据语言跟界面语言脱节 */
+  function tr(key, fallback) {
+    const i18n = typeof globalThis !== 'undefined' ? globalThis.StormI18N : null;
+    if (i18n && typeof i18n.t === 'function') {
+      const v = i18n.t(key);
+      if (v && v !== key) return v;
+    }
+    return fallback;
+  }
 
   const DEFAULTS = {
     events: null,      // null = 用种子数据
@@ -102,7 +189,7 @@
     const list = activities().slice();
     list.push({
       id: 'act' + Date.now().toString(36),
-      title: payload.title || '未命名活动',
+      title: payload.title || tr('act.untitled', '未命名活动'),
       date: payload.date,
       time: payload.time || '',
       place: payload.place || '',
@@ -179,7 +266,7 @@
     list.push({
       id: nextId,
       course: payload.course || '?',
-      title: payload.title || '未命名事项',
+      title: payload.title || tr('ev.untitled', '未命名事项'),
       due: payload.due,
       type: payload.type,
       kind: preset.kind,
@@ -211,6 +298,7 @@
 
   return {
     KEY, SEED_EVENTS, SEED_ACTIVITIES, DEFAULTS,
+    applyLocale,
     load, save, reset,
     events, saveEvents, addEvent, updateEvent, removeEvent,
     activities, saveActivities, addActivity, removeActivity, portState,
